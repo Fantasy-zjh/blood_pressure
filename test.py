@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import time
 from AnomalyDetector import AnomalyDetector
 from scipy import signal
+from WaveletDenoising import wavelet_noising
 
 
 if __name__ == "__main__":
@@ -25,17 +26,19 @@ if __name__ == "__main__":
         plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
         plt.rcParams['axes.unicode_minus'] = False
 
+        # 显示ppg图像
         plt.subplot(8, 4, count)
         plt.title("ppg " + str(i))
         plt.xlabel('t/ms')
         plt.ylabel('P/mmHg')
-        plt.plot(ppg_data[i])
+        plt.plot(abp_data[i])
 
+        # 显示去噪后的ppg
         plt.subplot(8, 4, count + 4)
-        plt.title("abp " + str(i))
+        plt.title("ppg denoisy " + str(i))
         plt.xlabel('t/ms')
         plt.ylabel('P/mmHg')
-        plt.plot(abp_data[i])
+        plt.plot(wavelet_noising(abp_data[i]))
 
         count += 1
         zero += 1
