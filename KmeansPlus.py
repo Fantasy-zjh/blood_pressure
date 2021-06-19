@@ -4,6 +4,8 @@ from numpy import *
 import codecs
 import matplotlib.pyplot as plt
 import math
+from MIMICData import MIMICHelper
+from scipy import signal
 
 
 # data = []
@@ -96,32 +98,19 @@ def KmeansPlus(dataset, k):
     return center, cluster_assign
 
 
-datas = [[1, 1, 1, 1], [5, 5, 5, 5], [10, 10, 10, 10], [1, 0, 2, 1], [3, 4, 5, 6], [11, 12, 13, 14], [11, 11, 11, 11],
-         [100, 100, 100, 100], [150, 150, 160, 140], [200, 300, 200, 100], [211, 250, 230, 180], [50, 60, 70, 80]]
-datas = array(datas)
-cluster_center, cluster_assign = KmeansPlus(datas, 3)
-print("cluster_center：\r\n" + str(cluster_center))
-print("----------------------------------")
-print("cluster_assign: \r\n" + str(cluster_assign))
-print("----------------------------------")
-print(datas[nonzero(cluster_assign[:, 0] == 0)])
-print("----------------------------------")
-print(datas[nonzero(cluster_assign[:, 0] == 1)])
-print("----------------------------------")
-print(datas[nonzero(cluster_assign[:, 0] == 2)])
-
-
-#
-# # 设置x,y轴的范围
-# xlim(0, 10)
-# ylim(0, 10)
-# # 做散点图
-# f1 = plt.figure(1)
-# plt.scatter(datas[nonzero(cluster_assign[:, 0] == 0), 0], datas[nonzero(cluster_assign[:, 0] == 0), 1], marker='o',
-#             color='r', label='0', s=30)
-# plt.scatter(datas[nonzero(cluster_assign[:, 0] == 1), 0], datas[nonzero(cluster_assign[:, 0] == 1), 1], marker='+',
-#             color='b', label='1', s=30)
-# plt.scatter(datas[nonzero(cluster_assign[:, 0] == 2), 0], datas[nonzero(cluster_assign[:, 0] == 2), 1], marker='*',
-#             color='g', label='2', s=30)
-# plt.scatter(cluster_center[:, 1], cluster_center[:, 0], marker='x', color='m', s=50)
-# plt.show()
+if __name__ == "__main__":
+    mimicHelper = MIMICHelper()
+    one_ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_DATA_PATH + "one_ppg.blood")
+    one_abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_DATA_PATH + "one_abp.blood")
+    # resample到125个点
+    one_ppg_data = [signal.resample(data, mimicHelper.SAMPLE_RATE).tolist() for data in one_ppg_data]
+    one_abp_data = [signal.resample(data, mimicHelper.SAMPLE_RATE).tolist() for data in one_abp_data]
+    one_ppg_data = array(one_ppg_data)
+    one_abp_data = array(one_abp_data)
+    # 1000类
+    cluster_center, cluster_assign = KmeansPlus(one_ppg_data, 1000)
+    cluster_center = cluster_center.tolist()
+    mimicHelper.writeToFile(cluster_center, mimicHelper.MIMIC_ONE_1000_PATH + "center.cluster")
+    for i in range(1000):
+        index_list = nonzero(cluster_assign[:, 0] == i)[0].tolist()
+        mimicHelper.writeToFile2(index_list, mimicHelper.MIMIC_ONE_1000_PATH + str(i) + ".cluster")
