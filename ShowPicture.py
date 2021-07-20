@@ -1,4 +1,5 @@
 from MIMICData import MIMICHelper
+from SphygmoCorData import SphygmoCorHelper
 import matplotlib.pyplot as plt
 import time
 from AnomalyDetector import AnomalyDetector
@@ -6,11 +7,12 @@ from scipy import signal
 from WaveletDenoising import wavelet_noising
 
 if __name__ == "__main__":
-    mimicHelper = MIMICHelper()
+    # mimicHelper = MIMICHelper()
     start_time = time.time()
-    abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_DATA_PATH + "abp.blood")
-    ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_DATA_PATH + "ppg.blood")
-    invalid_index = mimicHelper.readFromFileInteger(mimicHelper.ANOMALY_DATA_PATH + "invalid_index.blood")
+    # abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_DATA_PATH + "abp.blood")
+    # ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_DATA_PATH + "ppg.blood")
+    # invalid_index = mimicHelper.readFromFileInteger(mimicHelper.ANOMALY_DATA_PATH + "invalid_index.blood")
+    bbp_data, abp_data = SphygmoCorHelper.readSphygmoCorData()
     end_time = time.time()
     # print("行：" + str(len(abp_data)))  #11808
     # print("列：" + str(len(abp_data[0])))  #1000
@@ -20,9 +22,10 @@ if __name__ == "__main__":
     fig = 1
     count = 1
     zero = 1
-    for i in range(len(ppg_data)):
-        if i in invalid_index:
-            continue
+    for i in range(len(abp_data)):
+        # 跳过异常值
+        # if i in invalid_index:
+        #     continue
         # 识别异常值
         # anomalyDetector.setData(ppg_data[i])
         # detect_ret = anomalyDetector.SHESDdetect()
@@ -59,16 +62,16 @@ if __name__ == "__main__":
         plt.title("ppg " + str(i))
         plt.xlabel('t/ms')
         plt.ylabel('P/mmHg')
-        plt.plot(ppg_data[i])
+        plt.plot(bbp_data[i])
         # for j in range(len(valleys_index1)):
         # plt.plot(valleys_index1[2], ppg_data[i][valleys_index1[2]], 'o', color='red')
         # plt.plot(valleys_index1[3], ppg_data[i][valleys_index1[3]], 'o', color='red')
 
         plt.subplot(8, 4, count + 4)
-        plt.title("ppg denoisy " + str(i))
+        plt.title("abp " + str(i))
         plt.xlabel('t/ms')
         plt.ylabel('P/mmHg')
-        plt.plot(wavelet_noising(ppg_data[i]))
+        plt.plot(abp_data[i])
         # for j in range(len(valleys_index2)):
         # plt.plot(valleys_index2[2], abp_data[i][valleys_index2[2]], 'o', color='red')
         # plt.plot(valleys_index2[3], abp_data[i][valleys_index2[3]], 'o', color='red')

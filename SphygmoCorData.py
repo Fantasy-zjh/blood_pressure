@@ -1,22 +1,22 @@
 import os
-import h5py
-import numpy as np
-import time
 import matplotlib.pyplot as plt
 from scipy import signal
 
 
-from MIMICData import MIMICHelper
-
-SPHYGMOCOR_FILE_PATH = "E:\\毕业论文\\blood_data\\data5\\"
-
 class SphygmoCorHelper:
-    @staticmethod
-    def readSphygmoCorData():
+    SAMPLE_RATE = 125
+    SPHYGMOCOR_FILE_PATH = "E:\\毕业论文\\blood_data\\hospital\\"
+    SPHYGMOCOR_500_PATH = SPHYGMOCOR_FILE_PATH + "extract\\500\\"
+    SPHYGMOCOR_200_PATH = SPHYGMOCOR_FILE_PATH + "extract\\200\\"
+    SPHYGMOCOR_100_PATH = SPHYGMOCOR_FILE_PATH + "extract\\100\\"
+
+    def readSphygmoCorData(self):
         bbp = []
         abp = []
-        for file in os.listdir(SPHYGMOCOR_FILE_PATH):
-            path = SPHYGMOCOR_FILE_PATH + file
+        for file in os.listdir(self.SPHYGMOCOR_FILE_PATH):
+            path = self.SPHYGMOCOR_FILE_PATH + file
+            if os.path.isdir(path):
+                continue
             with open(path, 'r') as f:
                 nums1 = []
                 nums2 = []
@@ -25,17 +25,16 @@ class SphygmoCorHelper:
                     num1, num2 = line.split(' ')
                     nums1.append(float(num1))
                     nums2.append(float(num2))
-                new_nums1 = signal.resample(nums1[:], 125)
-                new_nums2 = signal.resample(nums2[:], 125)
-                bbp.append(new_nums1)
-                abp.append(new_nums2)
+                bbp.append(nums1)
+                abp.append(nums2)
 
         return bbp, abp
 
 
 if __name__ == "__main__":
     # start_time = time.time()
-    bbp_data, abp_data = SphygmoCorHelper.readSphygmoCorData()
+    sphygmoCorHelper = SphygmoCorHelper()
+    bbp_data, abp_data = sphygmoCorHelper.readSphygmoCorData()
     # end_time = time.time()
     # print("行：" + str(len(abp_data)))  11808
     # print("列：" + str(len(abp_data[0])))  1000
@@ -48,16 +47,14 @@ if __name__ == "__main__":
         plt.title('bbp')
         plt.xlabel('t/ms')
         plt.ylabel('P/mmHg')
-        plt.plot(bbp_data[i], label="bbp")  # t是横坐标，bbp是纵坐标
-
-        # plt.text(t[index_tB] + 0.25, bbp[index_tB] + 1, 'B', ha='center', va='bottom', fontsize=10.5)
+        plt.plot(bbp_data[i], label='bbp')  # t是横坐标，bbp是纵坐标
+        plt.legend(loc='upper right', fontsize=6)
 
         plt.subplot(212)
         plt.title('abp')
         plt.xlabel('t/ms')
         plt.ylabel('P/mmHg')
-        plt.plot(abp_data[i], label="abp")
+        plt.plot(abp_data[i], label='abp')
+        plt.legend(loc='upper right', fontsize=6)
 
-        plt.tight_layout()
-        plt.legend()
         plt.show()

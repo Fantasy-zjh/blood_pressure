@@ -1,11 +1,11 @@
 # K-means++
 from pylab import *
 from numpy import *
-import codecs
 import matplotlib.pyplot as plt
 import math
 from MIMICData import MIMICHelper
 from scipy import signal
+from SphygmoCorData import SphygmoCorHelper
 
 
 # data = []
@@ -99,18 +99,47 @@ def KmeansPlus(dataset, k):
 
 
 if __name__ == "__main__":
+    # 读数据
     mimicHelper = MIMICHelper()
-    one_ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_DATA_PATH + "one_ppg.blood")
-    one_abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_DATA_PATH + "one_abp.blood")
+    # one_ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_DATA_PATH + "one_ppg.blood")
+    # one_abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_DATA_PATH + "one_abp.blood")
+    sphygmoCorHelper = SphygmoCorHelper()
+    bbp_data, abp_data = sphygmoCorHelper.readSphygmoCorData()
+
     # resample到125个点
-    one_ppg_data = [signal.resample(data, mimicHelper.SAMPLE_RATE).tolist() for data in one_ppg_data]
-    one_abp_data = [signal.resample(data, mimicHelper.SAMPLE_RATE).tolist() for data in one_abp_data]
-    one_ppg_data = array(one_ppg_data)
-    one_abp_data = array(one_abp_data)
-    # 1000类
-    cluster_center, cluster_assign = KmeansPlus(one_ppg_data, 1000)
+    # one_ppg_data = [signal.resample(data, mimicHelper.SAMPLE_RATE).tolist() for data in one_ppg_data]
+    # one_abp_data = [signal.resample(data, mimicHelper.SAMPLE_RATE).tolist() for data in one_abp_data]
+    # one_ppg_data = array(one_ppg_data)
+    # one_abp_data = array(one_abp_data)
+    bbp_data = [signal.resample(data, sphygmoCorHelper.SAMPLE_RATE).tolist() for data in bbp_data]
+    abp_data = [signal.resample(data, sphygmoCorHelper.SAMPLE_RATE).tolist() for data in abp_data]
+    bbp_data = array(bbp_data)
+    abp_data = array(abp_data)
+
+    # 开始聚类，k个类
+    k = 500
+    path = sphygmoCorHelper.SPHYGMOCOR_500_PATH
+    cluster_center, cluster_assign = KmeansPlus(bbp_data, k)
     cluster_center = cluster_center.tolist()
-    mimicHelper.writeToFile(cluster_center, mimicHelper.MIMIC_ONE_1000_PATH + "center.cluster")
-    for i in range(1000):
+    mimicHelper.writeToFile(cluster_center, path + "center.cluster")
+    for i in range(k):
         index_list = nonzero(cluster_assign[:, 0] == i)[0].tolist()
-        mimicHelper.writeToFile2(index_list, mimicHelper.MIMIC_ONE_1000_PATH + str(i) + ".cluster")
+        mimicHelper.writeToFile2(index_list, path + str(i) + ".cluster")
+
+    k = 200
+    path = sphygmoCorHelper.SPHYGMOCOR_200_PATH
+    cluster_center, cluster_assign = KmeansPlus(bbp_data, k)
+    cluster_center = cluster_center.tolist()
+    mimicHelper.writeToFile(cluster_center, path + "center.cluster")
+    for i in range(k):
+        index_list = nonzero(cluster_assign[:, 0] == i)[0].tolist()
+        mimicHelper.writeToFile2(index_list, path + str(i) + ".cluster")
+
+    k = 100
+    path = sphygmoCorHelper.SPHYGMOCOR_100_PATH
+    cluster_center, cluster_assign = KmeansPlus(bbp_data, k)
+    cluster_center = cluster_center.tolist()
+    mimicHelper.writeToFile(cluster_center, path + "center.cluster")
+    for i in range(k):
+        index_list = nonzero(cluster_assign[:, 0] == i)[0].tolist()
+        mimicHelper.writeToFile2(index_list, path + str(i) + ".cluster")

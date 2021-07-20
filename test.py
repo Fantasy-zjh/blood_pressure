@@ -15,6 +15,8 @@ from scipy import signal
 from MIMICData import MIMICHelper
 from scipy.fftpack import fft, ifft
 import matplotlib.pyplot as plt
+import os
+import json
 
 
 # 计算两点之间的距离
@@ -23,6 +25,6 @@ def eucliDist(A, B):
 
 
 if __name__ == "__main__":
-    a = [[1, 10], [3, 20]]
-    a_r = np.array(a)
-    print(a_r.mean(axis=0))
+    a = [1, 2, 1, 2]
+    print(np.std(a))
+    print(np.mean(a))
