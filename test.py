@@ -7,7 +7,6 @@ from WaveletDenoising import wavelet_noising
 import math
 import numpy as np
 from pylab import *
-from numpy import *
 import codecs
 import matplotlib.pyplot as plt
 import math
@@ -17,14 +16,10 @@ from scipy.fftpack import fft, ifft
 import matplotlib.pyplot as plt
 import os
 import json
-
-
-# 计算两点之间的距离
-def eucliDist(A, B):
-    return math.sqrt(sum([(a - b) ** 2 for (a, b) in zip(A, B)]))
-
+from SphygmoCorData import SphygmoCorHelper
 
 if __name__ == "__main__":
-    a = [1, 2, 1, 2]
-    print(np.std(a))
-    print(np.mean(a))
+    a = np.array([100, 2, 2],)
+    a = a / 2
+    a[0] /= 5
+    print(a)

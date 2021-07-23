@@ -44,8 +44,8 @@ if __name__ == "__main__":
         bbp_data_125.append(bbp_125)
 
     # 聚类中心展示
+    plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
     # plt.figure(1, figsize=(12, 8))
-    # plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
     # plt.rcParams['axes.unicode_minus'] = False
     #
     # plt.title("centers")
