@@ -11,20 +11,23 @@ if __name__ == "__main__":
     # 读取原始的未处理的abp和ppg波形
     # abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_DATA_PATH + "one_abp.blood")
     # ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_DATA_PATH + "one_ppg.blood")
-    bbp_data, abp_data = sphygmoCorHelper.readSphygmoCorData()
+    # bbp_data, abp_data = sphygmoCorHelper.readSphygmoCorData()
+    bbp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TRAIN_PATH + "bbp_train_73.blood")
+    abp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TRAIN_PATH + "abp_train_73.blood")
 
     # 读取ppg聚类中心波形
     # centers = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_1000_PATH + "center.cluster")
-    centers = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_500_PATH + "center.cluster")
+    centers = mimicHelper.readFromFileFloat(sphygmoCorHelper.JAVA_1000_PATH + "center.cluster")
 
+    N = 1000
     # 读取子类索引
     # cluster_index = list()
     # for i in range(1000):
     #     index = mimicHelper.readFromFileInteger(mimicHelper.MIMIC_ONE_1000_PATH + str(i) + ".cluster")
     #     cluster_index.append(index)
     cluster_index = list()
-    for i in range(500):
-        index = mimicHelper.readFromFileInteger(sphygmoCorHelper.SPHYGMOCOR_500_PATH + str(i) + ".cluster")
+    for i in range(N):
+        index = mimicHelper.readFromFileInteger(sphygmoCorHelper.JAVA_1000_PATH + str(i) + ".cluster")
         cluster_index.append(index)
 
     # resample至125个点
@@ -35,16 +38,16 @@ if __name__ == "__main__":
     #     ppg_125 = signal.resample(ppg_data[i], 125).tolist()
     #     abp_data_125.append(abp_125)
     #     ppg_data_125.append(ppg_125)
-    abp_data_125 = list()
-    bbp_data_125 = list()
-    for i in range(len(abp_data)):
-        abp_125 = signal.resample(abp_data[i], 125).tolist()
-        bbp_125 = signal.resample(bbp_data[i], 125).tolist()
-        abp_data_125.append(abp_125)
-        bbp_data_125.append(bbp_125)
+    # abp_data_125 = list()
+    # bbp_data_125 = list()
+    # for i in range(len(abp_data)):
+    #     abp_125 = signal.resample(abp_data[i], 125).tolist()
+    #     bbp_125 = signal.resample(bbp_data[i], 125).tolist()
+    #     abp_data_125.append(abp_125)
+    #     bbp_data_125.append(bbp_125)
 
     # 聚类中心展示
-    plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
+    # plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
     # plt.figure(1, figsize=(12, 8))
     # plt.rcParams['axes.unicode_minus'] = False
     #
@@ -52,7 +55,7 @@ if __name__ == "__main__":
     # plt.ylabel('P/mmHg')
     # for i in range(len(centers)):
     #     plt.plot(centers[i])
-    #     # plt.pause(0.1)
+    #     plt.pause(0.1)
     # plt.show()
 
     # 子类展示

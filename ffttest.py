@@ -37,12 +37,11 @@ if __name__ == "__main__":
         _abs[0] /= 2
         _angle = np.angle(_fft)
         y_list = []
-        nums = [11]  # 4Hz-15Hz
-        for num in nums:
-            y = _abs[0]
-            for i in range(1, num):
-                y += _abs[i] * np.cos(i * t + _angle[i])
-            y_list.append(y)
+
+        y = _abs[0]
+        for i in range(1, 11):
+            y += _abs[i] * np.cos(i * t + _angle[i])
+        y_list.append(y)
 
         # print("直流信号振幅：" + str(abs / N) + " 相位：" + str(angle))
         # print("直流信号振幅2：" + str((np.sqrt(real ** 2 + imag ** 2)) / N) + " 相位：" + str(np.arctan2(imag, real)))
@@ -51,12 +50,18 @@ if __name__ == "__main__":
         plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
 
         # plt.subplot(2, 1, 1)
-        plt.title("pic")
-        plt.ylabel('P/mmHg')
-        plt.plot(t, bbp, label="bbp", color='black')
-        for i in range(len(nums)):
-            plt.plot(t, y_list[i], label=str(nums[i]))
-        plt.legend(loc='upper right', fontsize=10)
+        plt.figure(1)
+        plt.ylabel('P/mmHg', fontsize=20)
+        plt.plot(np.arange(125), bbp, label="脉搏波", color='black')
+        # plt.plot(t, y_list[i], label='前10次谐波')
+        plt.legend(loc='upper right', fontsize=20)
+
+        # plt.subplot(2, 1, 2)
+        plt.figure(2)
+        plt.ylabel('幅值', fontsize=20)
+        plt.xlabel('频率/Hz', fontsize=20)
+        plt.stem((np.arange(N)/2*np.pi)[:125//4], _abs[:125//4])
+        # plt.legend(loc='upper right', fontsize=10)
 
         plt.tight_layout()
         plt.show()

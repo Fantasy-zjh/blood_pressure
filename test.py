@@ -1,25 +1,25 @@
-from MIMICData import MIMICHelper
 import matplotlib.pyplot as plt
-import time
-from AnomalyDetector import AnomalyDetector
-from scipy import signal
-from WaveletDenoising import wavelet_noising
-import math
+from MIMICData import MIMICHelper
 import numpy as np
-from pylab import *
-import codecs
-import matplotlib.pyplot as plt
-import math
-from scipy import signal
-from MIMICData import MIMICHelper
-from scipy.fftpack import fft, ifft
-import matplotlib.pyplot as plt
-import os
-import json
-from SphygmoCorData import SphygmoCorHelper
 
 if __name__ == "__main__":
-    a = np.array([100, 2, 2],)
-    a = a / 2
-    a[0] /= 5
-    print(a)
+    mimicHelper = MIMICHelper()
+    abp_data, ppg_data = mimicHelper.readMIMICData()
+
+    for i in range(len(abp_data)):
+        abp = abp_data[i]
+        ppg = ppg_data[i]
+        plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
+
+        plt.figure(1)
+        plt.ylabel('P/mmHg', fontsize=20)
+        plt.plot(np.arange(len(abp)), abp, label="ABP", color='black')
+        plt.legend(loc='upper right', fontsize=20)
+
+        plt.figure(2)
+        # plt.ylabel('P/mmHg', fontsize=20)
+        plt.plot(np.arange(len(ppg)), ppg, label="PPG", color='black')
+        plt.legend(loc='upper right', fontsize=20)
+
+        plt.tight_layout()
+        plt.show()

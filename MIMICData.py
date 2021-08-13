@@ -46,48 +46,10 @@ class MIMICHelper:
                     abp.append(abpdata)
                     ppg.append(ppgdata)
 
-                    # 去除基线漂移
-                    # abpdata = self.smooth(abpdata)
-                    # ppgdata = self.smooth(ppgdata)
-
-                    # 周期定为65ms，设置两个波峰之间的距离不小于60
-                    # abppeaks = signal.find_peaks(abpdata, distance=60)
-                    # ppgpeaks = signal.find_peaks(ppgdata, distance=60)
-                    # if len(abppeaks[0]) == 0 or len(ppgpeaks[0]) == 0:
-                    #     continue
-                    # select = random.randint(1, len(abppeaks[0]) - 2)
-                    # peak = abppeaks[0][select]
-                    # abp.append(abpdata[peak - 20: peak + 45])
-                    # select = random.randint(1, len(ppgpeaks[0]) - 2)
-                    # peak = ppgpeaks[0][select]
-                    # ppg.append(ppgdata[peak - 20: peak + 45])
-            # break
         return abp, ppg
 
-    # 合成的方法放弃
-    def mixToOne(self, data):
-        ret = list()
-        for listOfData in data:
-            mixedData = [0] * self.SAMPLE_RATE
-            valleys = signal.find_peaks([-x for x in listOfData], distance=60)[0]
-            length = len(valleys)
-            for i in range(0, length - 1):
-                oldData = listOfData[valleys[i]:valleys[i + 1]]
-                newData = signal.resample(oldData, self.SAMPLE_RATE)
-                for j in range(self.SAMPLE_RATE):
-                    mixedData[j] += newData[j]
-            mixedData = [x / (length - 1) for x in mixedData]
-            ret.append(mixedData)
-        return ret
-
-    def getOne(self, abp_data, ppg_data):
-        abp_ret = list()
-        ppg_ret = list()
-        for index in range(len(abp_data)):
-            listOfData = abp_data[index]
-            peaks = signal.find_peaks(listOfData, distance=60)[0]
-
-    def writeToFile(self, data, filename):
+    @staticmethod
+    def writeToFile(data, filename):
         with open(filename, 'w') as f:
             total = len(data)
             print("写到(" + filename + ")的原始数据一共:" + str(total) + "行")
@@ -104,7 +66,8 @@ class MIMICHelper:
                     print("写了：" + str((cur / total) * 100) + "%数据，时间：" + time.strftime('%Y-%m-%d %H:%M:%S',
                                                                                        time.localtime(time.time())))
 
-    def writeToFile2(self, data, filename):
+    @staticmethod
+    def writeToFile2(data, filename):
         with open(filename, 'w') as f:
             total = len(data)
             print("写到(" + filename + ")的原始数据一共:" + str(total) + "行")
@@ -118,7 +81,8 @@ class MIMICHelper:
                     print("写了：" + str((cur / total) * 100) + "%数据，时间：" + time.strftime('%Y-%m-%d %H:%M:%S',
                                                                                        time.localtime(time.time())))
 
-    def readFromFileFloat(self, filename):
+    @staticmethod
+    def readFromFileFloat(filename):
         ret = list()
         with open(filename, 'r') as f:
             for line in f.readlines():
@@ -127,7 +91,8 @@ class MIMICHelper:
                 ret.append(data)
         return ret
 
-    def readFromFileInteger(self, filename):
+    @staticmethod
+    def readFromFileInteger(filename):
         ret = list()
         with open(filename, 'r') as f:
             for line in f.readlines():

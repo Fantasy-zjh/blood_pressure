@@ -14,11 +14,15 @@ if __name__ == "__main__":
     # 读取原始的未处理的abp和ppg波形
     # abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_DATA_PATH + "one_abp.blood")
     # ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_DATA_PATH + "one_ppg.blood")
-    bbp_data, abp_data = sphygmoCorHelper.readSphygmoCorData()
+    # bbp_data, abp_data = sphygmoCorHelper.readSphygmoCorData()
+    bbp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TRAIN_PATH + "bbp_train_73.blood")
+    abp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TRAIN_PATH + "abp_train_73.blood")
+    test_bbp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TEST_PATH + "bbp_test_73.blood")
+    test_abp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TEST_PATH + "abp_test_73.blood")
 
     # 读取ppg聚类中心波形
     # centers = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_1000_PATH + "center.cluster")
-    centers = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_500_PATH + "center.cluster")
+    centers = mimicHelper.readFromFileFloat(sphygmoCorHelper.JAVA_1000_PATH + "center.cluster")
 
     # 读取子类索引
     # cluster_index = list()
@@ -26,19 +30,25 @@ if __name__ == "__main__":
     #     index = mimicHelper.readFromFileInteger(mimicHelper.MIMIC_ONE_1000_PATH + str(i) + ".cluster")
     #     cluster_index.append(index)
     cluster_index = list()
-    for i in range(500):
-        index = mimicHelper.readFromFileInteger(sphygmoCorHelper.SPHYGMOCOR_500_PATH + str(i) + ".cluster")
+    for i in range(1000):
+        index = mimicHelper.readFromFileInteger(sphygmoCorHelper.JAVA_1000_PATH + str(i) + ".cluster")
         cluster_index.append(index)
 
     # resample至125个点
     N = 125
     abp_data_125 = list()
     bbp_data_125 = list()
+    test_abp_data_125 = list()
+    test_bbp_data_125 = list()
     for i in range(len(abp_data)):
         abp_125 = signal.resample(abp_data[i], N).tolist()
         bbp_125 = signal.resample(bbp_data[i], N).tolist()
+        test_abp_125 = signal.resample(abp_data[i], N).tolist()
+        test_bbp_125 = signal.resample(bbp_data[i], N).tolist()
         abp_data_125.append(abp_125)
         bbp_data_125.append(bbp_125)
+        test_abp_data_125.append(test_abp_125)
+        test_bbp_data_125.append(test_bbp_125)
     t = np.linspace(0.0, 2 * np.pi, N)
 
     # 计算聚类中心对应的中心动脉压的平均波形
@@ -127,7 +137,7 @@ if __name__ == "__main__":
                               )
     f3_angel_common = f3_ppg_fft_angel_mean - f3_abp_fft_angel_mean
 
-    # 预测中心动脉压
+    # 预测中心动脉压，拿测试集去预测
     # dis = predict - origin 差异，计算预测模型的准确度，进行比较
     # DBP 中心动脉舒张压，起点位置
     # SBP 中心动脉收缩压，最高点位置
@@ -145,8 +155,8 @@ if __name__ == "__main__":
             end_time = time.time()
             print("计算了" + str(percentage[percentage_i] * 100) + "%数据，耗时：" + str(end_time - start_time))
             percentage_i += 1
-        origin_ppg = bbp_data_125[i]  # 原始ppg
-        origin_abp = abp_data_125[i]  # 原始abp
+        origin_ppg = test_bbp_data_125[i]  # 测试集原始ppg
+        origin_abp = test_abp_data_125[i]  # 测试集原始abp
         # 计算该ppg属于哪一类聚类，索引值是index
         min_dis = 99999
         index = 0
@@ -159,6 +169,7 @@ if __name__ == "__main__":
         predict_abp_f1 = np.divide(np.array(origin_ppg), np.array(f1[index]),
                                    out=np.array(origin_abp, dtype='float64'),
                                    where=np.array(f1[index]) != 0)
+
         origin_ppg_fft = fft(origin_ppg)
         origin_ppg_abs = np.abs(origin_ppg_fft)
         origin_ppg_angel = np.angle(origin_ppg_fft)
@@ -182,7 +193,7 @@ if __name__ == "__main__":
                                    )
         f3_predict_angel = origin_ppg_angel - f3_angel_common
         predict_abp_f3 = f3_predict_abs[0]
-        for k in range(1, 11):
+        for k in range(1, len(f3_predict_abs)):
             predict_abp_f3 += f3_predict_abs[k] * np.cos(k * t + f3_predict_angel[k])
 
         # 展示一下各个预测值

@@ -9,6 +9,13 @@ class SphygmoCorHelper:
     SPHYGMOCOR_500_PATH = SPHYGMOCOR_FILE_PATH + "extract\\500\\"
     SPHYGMOCOR_200_PATH = SPHYGMOCOR_FILE_PATH + "extract\\200\\"
     SPHYGMOCOR_100_PATH = SPHYGMOCOR_FILE_PATH + "extract\\100\\"
+    JAVA_100_PATH = SPHYGMOCOR_FILE_PATH + "extract\\java_100\\"
+    JAVA_200_PATH = SPHYGMOCOR_FILE_PATH + "extract\\java_200\\"
+    JAVA_300_PATH = SPHYGMOCOR_FILE_PATH + "extract\\java_300\\"
+    JAVA_500_PATH = SPHYGMOCOR_FILE_PATH + "extract\\java_500\\"
+    JAVA_1000_PATH = SPHYGMOCOR_FILE_PATH + "extract\\java_1000\\"
+    SPHYGMOCOR_TRAIN_PATH = SPHYGMOCOR_FILE_PATH + "extract\\train\\"
+    SPHYGMOCOR_TEST_PATH = SPHYGMOCOR_FILE_PATH + "extract\\test\\"
 
     def readSphygmoCorData(self):
         bbp = []
