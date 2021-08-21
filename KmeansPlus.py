@@ -101,20 +101,20 @@ def KmeansPlus(dataset, k):
 if __name__ == "__main__":
     # 读数据
     mimicHelper = MIMICHelper()
-    # one_ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_DATA_PATH + "one_ppg.blood")
-    # one_abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_DATA_PATH + "one_abp.blood")
-    sphygmoCorHelper = SphygmoCorHelper()
-    bbp_data, abp_data = sphygmoCorHelper.readSphygmoCorData()
+    one_ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_DATA_PATH + "one_ppg.blood")
+    one_abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_DATA_PATH + "one_abp.blood")
+    # sphygmoCorHelper = SphygmoCorHelper()
+    # bbp_data, abp_data = sphygmoCorHelper.readSphygmoCorData()
 
     # resample到125个点
-    # one_ppg_data = [signal.resample(data, mimicHelper.SAMPLE_RATE).tolist() for data in one_ppg_data]
-    # one_abp_data = [signal.resample(data, mimicHelper.SAMPLE_RATE).tolist() for data in one_abp_data]
-    # one_ppg_data = array(one_ppg_data)
-    # one_abp_data = array(one_abp_data)
-    bbp_data = [signal.resample(data, sphygmoCorHelper.SAMPLE_RATE).tolist() for data in bbp_data]
-    abp_data = [signal.resample(data, sphygmoCorHelper.SAMPLE_RATE).tolist() for data in abp_data]
-    bbp_data = array(bbp_data)
-    abp_data = array(abp_data)
+    one_ppg_data = [signal.resample(data, mimicHelper.SAMPLE_RATE).tolist() for data in one_ppg_data]
+    one_abp_data = [signal.resample(data, mimicHelper.SAMPLE_RATE).tolist() for data in one_abp_data]
+    one_ppg_data = array(one_ppg_data)
+    one_abp_data = array(one_abp_data)
+    # bbp_data = [signal.resample(data, sphygmoCorHelper.SAMPLE_RATE).tolist() for data in bbp_data]
+    # abp_data = [signal.resample(data, sphygmoCorHelper.SAMPLE_RATE).tolist() for data in abp_data]
+    # bbp_data = array(bbp_data)
+    # abp_data = array(abp_data)
 
     # 开始聚类，k个类
     k = 500

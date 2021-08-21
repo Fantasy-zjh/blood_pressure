@@ -15,40 +15,44 @@ if __name__ == "__main__":
     # abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_DATA_PATH + "one_abp.blood")
     # ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_DATA_PATH + "one_ppg.blood")
     # bbp_data, abp_data = sphygmoCorHelper.readSphygmoCorData()
-    bbp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TRAIN_PATH + "bbp_train_73.blood")
-    abp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TRAIN_PATH + "abp_train_73.blood")
-    test_bbp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TEST_PATH + "bbp_test_73.blood")
-    test_abp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TEST_PATH + "abp_test_73.blood")
+    # bbp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TRAIN_PATH + "bbp_train_73.blood")
+    # abp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TRAIN_PATH + "abp_train_73.blood")
+    # test_bbp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TEST_PATH + "bbp_test_73.blood")
+    # test_abp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TEST_PATH + "abp_test_73.blood")
+    ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_TRAIN_DATA_PATH + "ppg_train_73.blood")
+    abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_TRAIN_DATA_PATH + "abp_train_73.blood")
+    test_ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_TEST_DATA_PATH + "ppg_test_73.blood")
+    test_abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_TEST_DATA_PATH + "abp_test_73.blood")
 
     # 读取ppg聚类中心波形
-    # centers = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_1000_PATH + "center.cluster")
-    centers = mimicHelper.readFromFileFloat(sphygmoCorHelper.JAVA_1000_PATH + "center.cluster")
+    centers = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_JAVA_1000_PATH + "center.cluster")
+    # centers = mimicHelper.readFromFileFloat(sphygmoCorHelper.JAVA_1000_PATH + "center.cluster")
 
     # 读取子类索引
-    # cluster_index = list()
-    # for i in range(1000):
-    #     index = mimicHelper.readFromFileInteger(mimicHelper.MIMIC_ONE_1000_PATH + str(i) + ".cluster")
-    #     cluster_index.append(index)
     cluster_index = list()
     for i in range(1000):
-        index = mimicHelper.readFromFileInteger(sphygmoCorHelper.JAVA_1000_PATH + str(i) + ".cluster")
+        index = mimicHelper.readFromFileInteger(mimicHelper.MIMIC_JAVA_1000_PATH + str(i) + ".cluster")
         cluster_index.append(index)
+    # cluster_index = list()
+    # for i in range(1000):
+    #     index = mimicHelper.readFromFileInteger(sphygmoCorHelper.JAVA_1000_PATH + str(i) + ".cluster")
+    #     cluster_index.append(index)
 
     # resample至125个点
     N = 125
     abp_data_125 = list()
-    bbp_data_125 = list()
+    ppg_data_125 = list()
     test_abp_data_125 = list()
-    test_bbp_data_125 = list()
+    test_ppg_data_125 = list()
     for i in range(len(abp_data)):
         abp_125 = signal.resample(abp_data[i], N).tolist()
-        bbp_125 = signal.resample(bbp_data[i], N).tolist()
+        ppg_125 = signal.resample(ppg_data[i], N).tolist()
         test_abp_125 = signal.resample(abp_data[i], N).tolist()
-        test_bbp_125 = signal.resample(bbp_data[i], N).tolist()
+        test_ppg_125 = signal.resample(ppg_data[i], N).tolist()
         abp_data_125.append(abp_125)
-        bbp_data_125.append(bbp_125)
+        ppg_data_125.append(ppg_125)
         test_abp_data_125.append(test_abp_125)
-        test_bbp_data_125.append(test_bbp_125)
+        test_ppg_data_125.append(test_ppg_125)
     t = np.linspace(0.0, 2 * np.pi, N)
 
     # 计算聚类中心对应的中心动脉压的平均波形
@@ -63,13 +67,9 @@ if __name__ == "__main__":
     # 计算全部中心动脉压的平均波形
     all_centers_abp = np.array(centers_abp).mean(axis=0).tolist()
 
-    # 计算传递函数 f1 = ppg / abp, 预测的时候 abp_y = ppg / f
-    f1 = list()
-    for i in range(len(centers_abp)):
-        _f = [x / y for x, y in zip(centers[i], centers_abp[i])]
-        f1.append(_f)
+    # f1 移动平均法
 
-    # 计算传递函数f2 利用傅里叶变换转换为频率 每个聚类计算一个传递函数
+    # 计算传递函数f2 自己的方法 利用傅里叶变换转换为频率 每个聚类计算一个传递函数
     f2_abs_common = list()
     f2_angle_common = list()
     for i in range(len(cluster_index)):
@@ -78,7 +78,7 @@ if __name__ == "__main__":
         fft_PPG = list()
         for j in range(row):
             fft_ABP.append(fft(abp_data_125[cluster_index[i][j]]))
-            fft_PPG.append(fft(bbp_data_125[cluster_index[i][j]]))
+            fft_PPG.append(fft(ppg_data_125[cluster_index[i][j]]))
         # 以1HZ为单位，计算全部模和幅角的均值
         abs_abp = np.zeros(N)
         angle_abp = np.zeros(N)
@@ -108,13 +108,13 @@ if __name__ == "__main__":
         f2_abs_common.append(abs_common)
         f2_angle_common.append(angle_common)
 
-    # 计算传递函数f3 对照组 论文里的方法 计算通用的传递函数
+    # 计算传递函数f3 范琳琳论文里的方法 计算通用的传递函数
     f3_ppg_fft_abs = np.zeros(N)
     f3_ppg_fft_angel = np.zeros(N)
     f3_abp_fft_abs = np.zeros(N)
     f3_abp_fft_angel = np.zeros(N)
-    for i in range(len(bbp_data_125)):
-        f3_ppg_fft = fft(bbp_data_125[i])
+    for i in range(len(abp_data_125)):
+        f3_ppg_fft = fft(ppg_data_125[i])
         f3_abp_fft = fft(abp_data_125[i])
         # abs要除以N/2
         tmp_abs = np.abs(f3_ppg_fft)
@@ -127,35 +127,61 @@ if __name__ == "__main__":
         f3_abp_fft_abs += tmp_abs
         f3_ppg_fft_angel += np.angle(f3_ppg_fft)
         f3_abp_fft_angel += np.angle(f3_abp_fft)
-    f3_ppg_fft_abs_mean = f3_ppg_fft_abs / len(bbp_data_125)
-    f3_ppg_fft_angel_mean = f3_ppg_fft_angel / len(bbp_data_125)
-    f3_abp_fft_abs_mean = f3_abp_fft_abs / len(bbp_data_125)
-    f3_abp_fft_angel_mean = f3_abp_fft_angel / len(bbp_data_125)
+    f3_ppg_fft_abs_mean = f3_ppg_fft_abs / len(abp_data_125)
+    f3_ppg_fft_angel_mean = f3_ppg_fft_angel / len(abp_data_125)
+    f3_abp_fft_abs_mean = f3_abp_fft_abs / len(abp_data_125)
+    f3_abp_fft_angel_mean = f3_abp_fft_angel / len(abp_data_125)
     f3_abs_common = np.divide(f3_ppg_fft_abs_mean, f3_abp_fft_abs_mean,
                               # out=np.array([9999999] * N, dtype='float64'),
                               # where=f3_abp_fft_abs_mean != 0
                               )
     f3_angel_common = f3_ppg_fft_angel_mean - f3_abp_fft_angel_mean
 
+    # 计算传递函数f4 吴樟洋论文方法 GTF法
+
     # 预测中心动脉压，拿测试集去预测
-    # dis = predict - origin 差异，计算预测模型的准确度，进行比较
+    # AE = |est - true| 绝对误差
+    # RE = |est - true| / true 相对误差
     # DBP 中心动脉舒张压，起点位置
     # SBP 中心动脉收缩压，最高点位置
-    f1_DBP_dis_array = []
-    f2_DBP_dis_array = []
-    f3_DBP_dis_array = []
-    f1_SBP_dis_array = []
-    f2_SBP_dis_array = []
-    f3_SBP_dis_array = []
+    # PP 脉压差，SBP - DBP
+    f1_DBP_AE_array = []
+    f1_DBP_RE_array = []
+    f1_SBP_AE_array = []
+    f1_SBP_RE_array = []
+    f1_PP_AE_array = []
+    f1_PP_RE_array = []
+
+    f2_DBP_AE_array = []
+    f2_DBP_RE_array = []
+    f2_SBP_AE_array = []
+    f2_SBP_RE_array = []
+    f2_PP_AE_array = []
+    f2_PP_RE_array = []
+
+    f3_DBP_AE_array = []
+    f3_DBP_RE_array = []
+    f3_SBP_AE_array = []
+    f3_SBP_RE_array = []
+    f3_PP_AE_array = []
+    f3_PP_RE_array = []
+
+    f4_DBP_AE_array = []
+    f4_DBP_RE_array = []
+    f4_SBP_AE_array = []
+    f4_SBP_RE_array = []
+    f4_PP_AE_array = []
+    f4_PP_RE_array = []
+
     start_time = time.time()
     percentage = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
     percentage_i = 0
     for i in range(len(abp_data)):
-        if i == percentage[percentage_i] * len(abp_data) - 1:
+        if i == int(percentage[percentage_i] * len(abp_data)) - 1:
             end_time = time.time()
             print("计算了" + str(percentage[percentage_i] * 100) + "%数据，耗时：" + str(end_time - start_time))
             percentage_i += 1
-        origin_ppg = test_bbp_data_125[i]  # 测试集原始ppg
+        origin_ppg = test_ppg_data_125[i]  # 测试集原始ppg
         origin_abp = test_abp_data_125[i]  # 测试集原始abp
         # 计算该ppg属于哪一类聚类，索引值是index
         min_dis = 99999
@@ -166,10 +192,21 @@ if __name__ == "__main__":
                 min_dis = dis
                 index = j
         # f1预测
-        predict_abp_f1 = np.divide(np.array(origin_ppg), np.array(f1[index]),
-                                   out=np.array(origin_abp, dtype='float64'),
-                                   where=np.array(f1[index]) != 0)
+        y_ppg = max(origin_ppg)
+        x_ppg = min(origin_ppg)
+        y_abp = max(origin_abp)
+        x_abp = min(origin_abp)
+        predict_abp_f1 = list()
+        block = N // 6  # N=5 block=2 k=2,3,4,5
+        for k in range(block, N + 1):
+            total = 0
+            for l in range(k - block, k):
+                total += origin_ppg[l]
+            NPMA_ppg = total / block
+            NPMA_abp = x_abp + (NPMA_ppg - x_ppg) * ((y_abp - x_abp) / (y_ppg - x_ppg))
+            predict_abp_f1.append(NPMA_abp)
 
+        # 准备测试数据的幅值和相位
         origin_ppg_fft = fft(origin_ppg)
         origin_ppg_abs = np.abs(origin_ppg_fft)
         origin_ppg_angel = np.angle(origin_ppg_fft)
@@ -195,6 +232,15 @@ if __name__ == "__main__":
         predict_abp_f3 = f3_predict_abs[0]
         for k in range(1, len(f3_predict_abs)):
             predict_abp_f3 += f3_predict_abs[k] * np.cos(k * t + f3_predict_angel[k])
+        # f4预测，用f3的就可以，最后只取前10次谐波
+        f4_predict_abs = np.divide(tmp_abs, f3_abs_common,
+                                   # out=np.array(all_centers_abp, dtype='float64'),
+                                   # where=f3_abs_common != 0
+                                   )
+        f4_predict_angel = origin_ppg_angel - f3_angel_common
+        predict_abp_f4 = f4_predict_abs[0]
+        for k in range(1, 11):
+            predict_abp_f4 += f4_predict_abs[k] * np.cos(k * t + f4_predict_angel[k])
 
         # 展示一下各个预测值
         # plt.figure(figsize=(8, 4), dpi=200)
@@ -217,52 +263,148 @@ if __name__ == "__main__":
         # peaks, properties = signal.find_peaks(origin_abp)
         # origin_SBP_value = max([origin_abp[index] for index in peaks])  # 原数据SBP
         origin_SBP_value = max(origin_abp)
+        origin_PP_value = origin_SBP_value - origin_DBP_value
 
-        f1_DBP_value = predict_abp_f1[0]  # f1预测的DBP
+        f1_DBP_value = min(predict_abp_f1)  # f1预测的DBP
         # peaks, properties = signal.find_peaks(predict_abp_f1)
         # f1_SBP_value = max([predict_abp_f1[index] for index in peaks])  # f1预测的SBP
         f1_SBP_value = max(predict_abp_f1)
-        f1_DBP_dis_array.append(abs(f1_DBP_value - origin_DBP_value))
-        f1_SBP_dis_array.append(abs(f1_SBP_value - origin_SBP_value))
+        PP = f1_SBP_value - f1_DBP_value
+        DBP_AE = abs(f1_DBP_value - origin_DBP_value)
+        DBP_RE = abs(f1_DBP_value - origin_DBP_value) / origin_DBP_value
+        SBP_AE = abs(f1_SBP_value - origin_SBP_value)
+        SBP_RE = abs(f1_SBP_value - origin_SBP_value) / origin_SBP_value
+        PP_AE = abs(PP - origin_PP_value)
+        PP_RE = abs(PP - origin_PP_value) / origin_PP_value
+        f1_DBP_AE_array.append(DBP_AE)
+        f1_DBP_RE_array.append(DBP_RE)
+        f1_SBP_AE_array.append(SBP_AE)
+        f1_SBP_RE_array.append(SBP_RE)
+        f1_PP_AE_array.append(PP_AE)
+        f1_PP_RE_array.append(PP_RE)
 
         f2_DBP_value = predict_abp_f2[0]  # f2预测的DBP
         # peaks, properties = signal.find_peaks(predict_abp_f2)
         # f2_SBP_value = max([predict_abp_f2[index] for index in peaks])  # f2预测的SBP
         f2_SBP_value = max(predict_abp_f2)
-        f2_DBP_dis_array.append(abs(f2_DBP_value - origin_DBP_value))
-        f2_SBP_dis_array.append(abs(f2_SBP_value - origin_SBP_value))
+        PP = f2_SBP_value - f2_DBP_value
+        DBP_AE = abs(f2_DBP_value - origin_DBP_value)
+        DBP_RE = abs(f2_DBP_value - origin_DBP_value) / origin_DBP_value
+        SBP_AE = abs(f2_SBP_value - origin_SBP_value)
+        SBP_RE = abs(f2_SBP_value - origin_SBP_value) / origin_SBP_value
+        PP_AE = abs(PP - origin_PP_value)
+        PP_RE = abs(PP - origin_PP_value) / origin_PP_value
+        f2_DBP_AE_array.append(DBP_AE)
+        f2_DBP_RE_array.append(DBP_RE)
+        f2_SBP_AE_array.append(SBP_AE)
+        f2_SBP_RE_array.append(SBP_RE)
+        f2_PP_AE_array.append(PP_AE)
+        f2_PP_RE_array.append(PP_RE)
 
         f3_DBP_value = predict_abp_f3[0]  # f3预测的DBP
         # peaks, properties = signal.find_peaks(predict_abp_f3)
         # f3_SBP_value = max([predict_abp_f3[index] for index in peaks])  # f3预测的SBP
         f3_SBP_value = max(predict_abp_f3)
-        f3_DBP_dis_array.append(abs(f3_DBP_value - origin_DBP_value))
-        f3_SBP_dis_array.append(abs(f3_SBP_value - origin_SBP_value))
+        PP = f3_SBP_value - f3_DBP_value
+        DBP_AE = abs(f3_DBP_value - origin_DBP_value)
+        DBP_RE = abs(f3_DBP_value - origin_DBP_value) / origin_DBP_value
+        SBP_AE = abs(f3_SBP_value - origin_SBP_value)
+        SBP_RE = abs(f3_SBP_value - origin_SBP_value) / origin_SBP_value
+        PP_AE = abs(PP - origin_PP_value)
+        PP_RE = abs(PP - origin_PP_value) / origin_PP_value
+        f3_DBP_AE_array.append(DBP_AE)
+        f3_DBP_RE_array.append(DBP_RE)
+        f3_SBP_AE_array.append(SBP_AE)
+        f3_SBP_RE_array.append(SBP_RE)
+        f3_PP_AE_array.append(PP_AE)
+        f3_PP_RE_array.append(PP_RE)
+
+        f4_DBP_value = predict_abp_f4[0]  # f4预测的DBP
+        f4_SBP_value = max(predict_abp_f4)  # f4预测的SBP
+        PP = f4_SBP_value - f4_DBP_value
+        DBP_AE = abs(f4_DBP_value - origin_DBP_value)
+        DBP_RE = abs(f4_DBP_value - origin_DBP_value) / origin_DBP_value
+        SBP_AE = abs(f4_SBP_value - origin_SBP_value)
+        SBP_RE = abs(f4_SBP_value - origin_SBP_value) / origin_SBP_value
+        PP_AE = abs(PP - origin_PP_value)
+        PP_RE = abs(PP - origin_PP_value) / origin_PP_value
+        f4_DBP_AE_array.append(DBP_AE)
+        f4_DBP_RE_array.append(DBP_RE)
+        f4_SBP_AE_array.append(SBP_AE)
+        f4_SBP_RE_array.append(SBP_RE)
+        f4_PP_AE_array.append(PP_AE)
+        f4_PP_RE_array.append(PP_RE)
     end_time = time.time()
     print("预测时间：" + str(end_time - start_time))
 
     # 计算平均值、方差等
-    f1_DBP_dis_mean = np.mean(f1_DBP_dis_array)
-    f1_DBP_dis_std = np.std(f1_DBP_dis_array)
-    f1_SBP_dis_mean = np.mean(f1_SBP_dis_array)
-    f1_SBP_dis_std = np.std(f1_SBP_dis_array)
+    f1_DBP_AE_mean = np.mean(f1_DBP_AE_array)
+    f1_DBP_AE_std = np.std(f1_DBP_AE_array)
+    f1_DBP_RE_mean = np.mean(f1_DBP_RE_array)
+    f1_DBP_RE_std = np.std(f1_DBP_RE_array)
+    f1_SBP_AE_mean = np.mean(f1_SBP_AE_array)
+    f1_SBP_AE_std = np.std(f1_SBP_AE_array)
+    f1_SBP_RE_mean = np.mean(f1_SBP_RE_array)
+    f1_SBP_RE_std = np.std(f1_SBP_RE_array)
+    f1_PP_AE_mean = np.mean(f1_PP_AE_array)
+    f1_PP_AE_std = np.std(f1_PP_AE_array)
+    f1_PP_RE_mean = np.mean(f1_PP_RE_array)
+    f1_PP_RE_std = np.std(f1_PP_RE_array)
 
-    f2_DBP_dis_mean = np.mean(f2_DBP_dis_array)
-    f2_DBP_dis_std = np.std(f2_DBP_dis_array)
-    f2_SBP_dis_mean = np.mean(f2_SBP_dis_array)
-    f2_SBP_dis_std = np.std(f2_SBP_dis_array)
+    f2_DBP_AE_mean = np.mean(f2_DBP_AE_array)
+    f2_DBP_AE_std = np.std(f2_DBP_AE_array)
+    f2_DBP_RE_mean = np.mean(f2_DBP_RE_array)
+    f2_DBP_RE_std = np.std(f2_DBP_RE_array)
+    f2_SBP_AE_mean = np.mean(f2_SBP_AE_array)
+    f2_SBP_AE_std = np.std(f2_SBP_AE_array)
+    f2_SBP_RE_mean = np.mean(f2_SBP_RE_array)
+    f2_SBP_RE_std = np.std(f2_SBP_RE_array)
+    f2_PP_AE_mean = np.mean(f2_PP_AE_array)
+    f2_PP_AE_std = np.std(f2_PP_AE_array)
+    f2_PP_RE_mean = np.mean(f2_PP_RE_array)
+    f2_PP_RE_std = np.std(f2_PP_RE_array)
 
-    f3_DBP_dis_mean = np.mean(f3_DBP_dis_array)
-    f3_DBP_dis_std = np.std(f3_DBP_dis_array)
-    f3_SBP_dis_mean = np.mean(f3_SBP_dis_array)
-    f3_SBP_dis_std = np.std(f3_SBP_dis_array)
-    print("预测结果以 均值±标准差 的形式表示")
-    print("f1预测的结果：1.DBP：" + str(f1_DBP_dis_mean) + "±" + str(f1_DBP_dis_std) + " 2.SBP：" + str(
-        f1_SBP_dis_mean) + "±" + str(
-        f1_SBP_dis_std))
-    print("f2预测的结果：1.DBP：" + str(f2_DBP_dis_mean) + "±" + str(f2_DBP_dis_std) + " 2.SBP：" + str(
-        f2_SBP_dis_mean) + "±" + str(
-        f2_SBP_dis_std))
-    print("f3预测的结果：1.DBP：" + str(f3_DBP_dis_mean) + "±" + str(f3_DBP_dis_std) + " 2.SBP：" + str(
-        f3_SBP_dis_mean) + "±" + str(
-        f3_SBP_dis_std))
+    f3_DBP_AE_mean = np.mean(f3_DBP_AE_array)
+    f3_DBP_AE_std = np.std(f3_DBP_AE_array)
+    f3_DBP_RE_mean = np.mean(f3_DBP_RE_array)
+    f3_DBP_RE_std = np.std(f3_DBP_RE_array)
+    f3_SBP_AE_mean = np.mean(f3_SBP_AE_array)
+    f3_SBP_AE_std = np.std(f3_SBP_AE_array)
+    f3_SBP_RE_mean = np.mean(f3_SBP_RE_array)
+    f3_SBP_RE_std = np.std(f3_SBP_RE_array)
+    f3_PP_AE_mean = np.mean(f3_PP_AE_array)
+    f3_PP_AE_std = np.std(f3_PP_AE_array)
+    f3_PP_RE_mean = np.mean(f3_PP_RE_array)
+    f3_PP_RE_std = np.std(f3_PP_RE_array)
+
+    f4_DBP_AE_mean = np.mean(f4_DBP_AE_array)
+    f4_DBP_AE_std = np.std(f4_DBP_AE_array)
+    f4_DBP_RE_mean = np.mean(f4_DBP_RE_array)
+    f4_DBP_RE_std = np.std(f4_DBP_RE_array)
+    f4_SBP_AE_mean = np.mean(f4_SBP_AE_array)
+    f4_SBP_AE_std = np.std(f4_SBP_AE_array)
+    f4_SBP_RE_mean = np.mean(f4_SBP_RE_array)
+    f4_SBP_RE_std = np.std(f4_SBP_RE_array)
+    f4_PP_AE_mean = np.mean(f4_PP_AE_array)
+    f4_PP_AE_std = np.std(f4_PP_AE_array)
+    f4_PP_RE_mean = np.mean(f4_PP_RE_array)
+    f4_PP_RE_std = np.std(f4_PP_RE_array)
+    print("           N点平移      本文方法      范琳琳        吴樟洋")
+    print("DBP AE:   %.2f±%.2f   %.2f±%.2f    %.2f±%.2f    %.2f±%.2f" % (
+        f1_DBP_AE_mean, f1_DBP_AE_std, f2_DBP_AE_mean, f2_DBP_AE_std, f3_DBP_AE_mean, f3_DBP_AE_std, f4_DBP_AE_mean,
+        f4_DBP_AE_std))
+    print("DBP RE:   %.2f±%.2f   %.2f±%.2f    %.2f±%.2f    %.2f±%.2f\n" % (
+        f1_DBP_RE_mean, f1_DBP_RE_std, f2_DBP_RE_mean, f2_DBP_RE_std, f3_DBP_RE_mean, f3_DBP_RE_std, f4_DBP_RE_mean,
+        f4_DBP_RE_std))
+    print("SBP AE:   %.2f±%.2f   %.2f±%.2f    %.2f±%.2f    %.2f±%.2f" % (
+        f1_SBP_AE_mean, f1_SBP_AE_std, f2_SBP_AE_mean, f2_SBP_AE_std, f3_SBP_AE_mean, f3_SBP_AE_std, f4_SBP_AE_mean,
+        f4_SBP_AE_std))
+    print("SBP RE:   %.2f±%.2f   %.2f±%.2f    %.2f±%.2f    %.2f±%.2f\n" % (
+        f1_SBP_RE_mean, f1_SBP_RE_std, f2_SBP_RE_mean, f2_SBP_RE_std, f3_SBP_RE_mean, f3_SBP_RE_std, f4_SBP_RE_mean,
+        f4_SBP_RE_std))
+    print("PP AE:    %.2f±%.2f   %.2f±%.2f    %.2f±%.2f    %.2f±%.2f" % (
+        f1_PP_AE_mean, f1_PP_AE_std, f2_PP_AE_mean, f2_PP_AE_std, f3_PP_AE_mean, f3_PP_AE_std, f4_PP_AE_mean,
+        f4_PP_AE_std))
+    print("PP RE:    %.2f±%.2f   %.2f±%.2f    %.2f±%.2f    %.2f±%.2f" % (
+        f1_PP_RE_mean, f1_PP_RE_std, f2_PP_RE_mean, f2_PP_RE_std, f3_PP_RE_mean, f3_PP_RE_std, f4_PP_RE_mean,
+        f4_PP_RE_std))

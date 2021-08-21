@@ -7,12 +7,12 @@ from scipy import signal
 from WaveletDenoising import wavelet_noising
 
 if __name__ == "__main__":
-    # mimicHelper = MIMICHelper()
+    mimicHelper = MIMICHelper()
     start_time = time.time()
-    # abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_DATA_PATH + "abp.blood")
-    # ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_DATA_PATH + "ppg.blood")
-    # invalid_index = mimicHelper.readFromFileInteger(mimicHelper.ANOMALY_DATA_PATH + "invalid_index.blood")
-    bbp_data, abp_data = SphygmoCorHelper.readSphygmoCorData()
+    abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_DATA_PATH + "abp.blood")
+    ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_DATA_PATH + "ppg.blood")
+    invalid_index = mimicHelper.readFromFileInteger(mimicHelper.ANOMALY_DATA_PATH + "invalid_index.blood")
+    # bbp_data, abp_data = SphygmoCorHelper.readSphygmoCorData()
     end_time = time.time()
     # print("行：" + str(len(abp_data)))  #11808
     # print("列：" + str(len(abp_data[0])))  #1000
@@ -22,9 +22,12 @@ if __name__ == "__main__":
     fig = 1
     count = 1
     zero = 1
-    for i in range(len(abp_data)):
+    zidingyi = [1907, 1925, 1939, 1778, 1839, 1704, 1723, 1733, 1591, 1475, 1518, 1434, 1415, 1422, 1447, 1230, 1182,
+                673, 479, 484, 526, ]
+    # for i in range(len(abp_data)):
+    for i in zidingyi:
         # 跳过异常值
-        # if i in invalid_index:
+        # if i not in invalid_index:
         #     continue
         # 识别异常值
         # anomalyDetector.setData(ppg_data[i])
@@ -59,18 +62,16 @@ if __name__ == "__main__":
         plt.rcParams['axes.unicode_minus'] = False
 
         plt.subplot(8, 4, count)
-        plt.title("ppg " + str(i))
-        plt.xlabel('t/ms')
-        plt.ylabel('P/mmHg')
-        plt.plot(bbp_data[i])
+        plt.title("ppg_" + str(i))
+        # plt.ylabel('P/mmHg')
+        plt.plot(ppg_data[i])
         # for j in range(len(valleys_index1)):
         # plt.plot(valleys_index1[2], ppg_data[i][valleys_index1[2]], 'o', color='red')
         # plt.plot(valleys_index1[3], ppg_data[i][valleys_index1[3]], 'o', color='red')
 
         plt.subplot(8, 4, count + 4)
-        plt.title("abp " + str(i))
-        plt.xlabel('t/ms')
-        plt.ylabel('P/mmHg')
+        plt.title("abp_" + str(i))
+        # plt.ylabel('P/mmHg')
         plt.plot(abp_data[i])
         # for j in range(len(valleys_index2)):
         # plt.plot(valleys_index2[2], abp_data[i][valleys_index2[2]], 'o', color='red')
@@ -84,9 +85,8 @@ if __name__ == "__main__":
         if count % 33 == 0:
             count = 1
             fig += 1
-        if fig % 21 == 0:
-            # plt.tight_layout()
-            plt.legend()
+        if fig % 2 == 0:
+            plt.tight_layout()
             fig = 1
             plt.show()
         # plt.text(t[index_tB] + 0.25, bbp[index_tB] + 1, 'B', ha='center', va='bottom', fontsize=10.5)

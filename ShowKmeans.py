@@ -9,35 +9,35 @@ if __name__ == "__main__":
     sphygmoCorHelper = SphygmoCorHelper()
 
     # 读取原始的未处理的abp和ppg波形
-    # abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_DATA_PATH + "one_abp.blood")
-    # ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_DATA_PATH + "one_ppg.blood")
+    ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_TRAIN_DATA_PATH + "ppg_train_73.blood")
+    abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_TRAIN_DATA_PATH + "abp_train_73.blood")
     # bbp_data, abp_data = sphygmoCorHelper.readSphygmoCorData()
-    bbp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TRAIN_PATH + "bbp_train_73.blood")
-    abp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TRAIN_PATH + "abp_train_73.blood")
+    # bbp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TRAIN_PATH + "bbp_train_73.blood")
+    # abp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TRAIN_PATH + "abp_train_73.blood")
 
     # 读取ppg聚类中心波形
-    # centers = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_1000_PATH + "center.cluster")
-    centers = mimicHelper.readFromFileFloat(sphygmoCorHelper.JAVA_1000_PATH + "center.cluster")
+    centers = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_DATA_PATH + "java_1000\\center.cluster")
+    # centers = mimicHelper.readFromFileFloat(sphygmoCorHelper.JAVA_1000_PATH + "center.cluster")
 
     N = 1000
     # 读取子类索引
-    # cluster_index = list()
-    # for i in range(1000):
-    #     index = mimicHelper.readFromFileInteger(mimicHelper.MIMIC_ONE_1000_PATH + str(i) + ".cluster")
-    #     cluster_index.append(index)
     cluster_index = list()
-    for i in range(N):
-        index = mimicHelper.readFromFileInteger(sphygmoCorHelper.JAVA_1000_PATH + str(i) + ".cluster")
+    for i in range(1000):
+        index = mimicHelper.readFromFileInteger(mimicHelper.MIMIC_ONE_DATA_PATH + "java_1000\\" + str(i) + ".cluster")
         cluster_index.append(index)
+    # cluster_index = list()
+    # for i in range(N):
+    #     index = mimicHelper.readFromFileInteger(sphygmoCorHelper.JAVA_1000_PATH + str(i) + ".cluster")
+    #     cluster_index.append(index)
 
     # resample至125个点
-    # abp_data_125 = list()
-    # ppg_data_125 = list()
-    # for i in range(len(ppg_data)):
-    #     abp_125 = signal.resample(abp_data[i], 125).tolist()
-    #     ppg_125 = signal.resample(ppg_data[i], 125).tolist()
-    #     abp_data_125.append(abp_125)
-    #     ppg_data_125.append(ppg_125)
+    abp_data_125 = list()
+    ppg_data_125 = list()
+    for i in range(len(ppg_data)):
+        abp_125 = signal.resample(abp_data[i], 125).tolist()
+        ppg_125 = signal.resample(ppg_data[i], 125).tolist()
+        abp_data_125.append(abp_125)
+        ppg_data_125.append(ppg_125)
     # abp_data_125 = list()
     # bbp_data_125 = list()
     # for i in range(len(abp_data)):
@@ -66,14 +66,14 @@ if __name__ == "__main__":
         plt.title("ppg")
         plt.ylabel('P/mmHg')
         for j in range(num):
-            bbp_data[cluster_index[i][j]] = signal.resample(bbp_data[cluster_index[i][j]], 125).tolist()
-            plt.plot(bbp_data[cluster_index[i][j]], label="bbp")
+            # bbp_data[cluster_index[i][j]] = signal.resample(bbp_data[cluster_index[i][j]], 125).tolist()
+            plt.plot(ppg_data[cluster_index[i][j]], label="ppg")
         plt.plot(centers[i], label="center", linestyle='--')
         plt.subplot(2, 1, 2)
         plt.title("abp")
         plt.ylabel("p/mmHg")
         for j in range(num):
-            abp_data[cluster_index[i][j]] = signal.resample(abp_data[cluster_index[i][j]], 125).tolist()
+            # abp_data[cluster_index[i][j]] = signal.resample(abp_data[cluster_index[i][j]], 125).tolist()
             plt.plot(abp_data[cluster_index[i][j]])
 
         plt.tight_layout()

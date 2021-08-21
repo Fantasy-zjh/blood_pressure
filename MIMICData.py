@@ -12,6 +12,9 @@ class MIMICHelper:
     ANOMALY_DATA_PATH = MIMIC_FILE_PATH + "extract\\anomaly\\"
     MIMIC_ONE_DATA_PATH = MIMIC_FILE_PATH + "extract\\originOne\\"
     MIMIC_ONE_1000_PATH = MIMIC_ONE_DATA_PATH + "1000\\"
+    MIMIC_JAVA_1000_PATH = MIMIC_ONE_DATA_PATH + "java_1000\\"
+    MIMIC_TRAIN_DATA_PATH = MIMIC_ONE_DATA_PATH + "train\\"
+    MIMIC_TEST_DATA_PATH = MIMIC_ONE_DATA_PATH + "test\\"
 
     def readMIMICData(self):
         # 中心动脉压

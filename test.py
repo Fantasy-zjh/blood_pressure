@@ -1,25 +1,17 @@
 import matplotlib.pyplot as plt
 from MIMICData import MIMICHelper
 import numpy as np
+from WaveletDenoising import wavelet_noising
+from scipy import signal
+import random
 
 if __name__ == "__main__":
-    mimicHelper = MIMICHelper()
-    abp_data, ppg_data = mimicHelper.readMIMICData()
-
-    for i in range(len(abp_data)):
-        abp = abp_data[i]
-        ppg = ppg_data[i]
-        plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
-
-        plt.figure(1)
-        plt.ylabel('P/mmHg', fontsize=20)
-        plt.plot(np.arange(len(abp)), abp, label="ABP", color='black')
-        plt.legend(loc='upper right', fontsize=20)
-
-        plt.figure(2)
-        # plt.ylabel('P/mmHg', fontsize=20)
-        plt.plot(np.arange(len(ppg)), ppg, label="PPG", color='black')
-        plt.legend(loc='upper right', fontsize=20)
-
-        plt.tight_layout()
-        plt.show()
+    mean = 1.23
+    std = 2.34
+    print("           N点平移      本文方法      范琳琳        吴樟洋")
+    print("DBP AE:   %.2f±%.2f   %.2f±%.2f    %.2f±%.2f    %.2f±%.2f" % (mean, std, mean, std, mean, std, mean, std))
+    print("DBP RE:   %.2f±%.2f   %.2f±%.2f    %.2f±%.2f    %.2f±%.2f\n" % (mean, std, mean, std, mean, std, mean, std))
+    print("SBP AE:   %.2f±%.2f   %.2f±%.2f    %.2f±%.2f    %.2f±%.2f" % (mean, std, mean, std, mean, std, mean, std))
+    print("SBP RE:   %.2f±%.2f   %.2f±%.2f    %.2f±%.2f    %.2f±%.2f\n" % (mean, std, mean, std, mean, std, mean, std))
+    print("PP RE:    %.2f±%.2f   %.2f±%.2f    %.2f±%.2f    %.2f±%.2f" % (mean, std, mean, std, mean, std, mean, std))
+    print("PP RE:    %.2f±%.2f   %.2f±%.2f    %.2f±%.2f    %.2f±%.2f" % (mean, std, mean, std, mean, std, mean, std))
