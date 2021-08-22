@@ -102,3 +102,7 @@ class MIMICHelper:
                 line.strip()
                 ret.append(int(line))
         return ret
+
+
+if __name__ == "__main__":
+    print("")

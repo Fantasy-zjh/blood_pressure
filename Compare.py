@@ -12,31 +12,25 @@ if __name__ == "__main__":
     sphygmoCorHelper = SphygmoCorHelper()
 
     # 读取原始的未处理的abp和ppg波形
-    # abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_DATA_PATH + "one_abp.blood")
-    # ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_ONE_DATA_PATH + "one_ppg.blood")
-    # bbp_data, abp_data = sphygmoCorHelper.readSphygmoCorData()
-    # bbp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TRAIN_PATH + "bbp_train_73.blood")
-    # abp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TRAIN_PATH + "abp_train_73.blood")
-    # test_bbp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TEST_PATH + "bbp_test_73.blood")
-    # test_abp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TEST_PATH + "abp_test_73.blood")
-    ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_TRAIN_DATA_PATH + "ppg_train_73.blood")
-    abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_TRAIN_DATA_PATH + "abp_train_73.blood")
-    test_ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_TEST_DATA_PATH + "ppg_test_73.blood")
-    test_abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_TEST_DATA_PATH + "abp_test_73.blood")
+    ppg_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TRAIN_PATH + "bbp_train_73.blood")
+    abp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TRAIN_PATH + "abp_train_73.blood")
+    test_ppg_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TEST_PATH + "bbp_test_73.blood")
+    test_abp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TEST_PATH + "abp_test_73.blood")
+    # ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_TRAIN_DATA_PATH + "ppg_train_73.blood")
+    # abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_TRAIN_DATA_PATH + "abp_train_73.blood")
+    # test_ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_TEST_DATA_PATH + "ppg_test_73.blood")
+    # test_abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_TEST_DATA_PATH + "abp_test_73.blood")
 
     # 读取ppg聚类中心波形
-    centers = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_JAVA_1000_PATH + "center.cluster")
-    # centers = mimicHelper.readFromFileFloat(sphygmoCorHelper.JAVA_1000_PATH + "center.cluster")
+    # centers = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_JAVA_1000_PATH + "center.cluster")
+    centers = mimicHelper.readFromFileFloat(sphygmoCorHelper.JAVA_1000_PATH + "center.cluster")
 
     # 读取子类索引
     cluster_index = list()
     for i in range(1000):
-        index = mimicHelper.readFromFileInteger(mimicHelper.MIMIC_JAVA_1000_PATH + str(i) + ".cluster")
+        # index = mimicHelper.readFromFileInteger(mimicHelper.MIMIC_JAVA_1000_PATH + str(i) + ".cluster")
+        index = mimicHelper.readFromFileInteger(sphygmoCorHelper.JAVA_1000_PATH + str(i) + ".cluster")
         cluster_index.append(index)
-    # cluster_index = list()
-    # for i in range(1000):
-    #     index = mimicHelper.readFromFileInteger(sphygmoCorHelper.JAVA_1000_PATH + str(i) + ".cluster")
-    #     cluster_index.append(index)
 
     # resample至125个点
     N = 125
@@ -266,8 +260,6 @@ if __name__ == "__main__":
         origin_PP_value = origin_SBP_value - origin_DBP_value
 
         f1_DBP_value = min(predict_abp_f1)  # f1预测的DBP
-        # peaks, properties = signal.find_peaks(predict_abp_f1)
-        # f1_SBP_value = max([predict_abp_f1[index] for index in peaks])  # f1预测的SBP
         f1_SBP_value = max(predict_abp_f1)
         PP = f1_SBP_value - f1_DBP_value
         DBP_AE = abs(f1_DBP_value - origin_DBP_value)
@@ -284,6 +276,7 @@ if __name__ == "__main__":
         f1_PP_RE_array.append(PP_RE)
 
         f2_DBP_value = predict_abp_f2[0]  # f2预测的DBP
+        # f2_DBP_value = min(predict_abp_f2)
         # peaks, properties = signal.find_peaks(predict_abp_f2)
         # f2_SBP_value = max([predict_abp_f2[index] for index in peaks])  # f2预测的SBP
         f2_SBP_value = max(predict_abp_f2)
@@ -302,6 +295,7 @@ if __name__ == "__main__":
         f2_PP_RE_array.append(PP_RE)
 
         f3_DBP_value = predict_abp_f3[0]  # f3预测的DBP
+        # f3_DBP_value = min(predict_abp_f3)
         # peaks, properties = signal.find_peaks(predict_abp_f3)
         # f3_SBP_value = max([predict_abp_f3[index] for index in peaks])  # f3预测的SBP
         f3_SBP_value = max(predict_abp_f3)
@@ -320,6 +314,7 @@ if __name__ == "__main__":
         f3_PP_RE_array.append(PP_RE)
 
         f4_DBP_value = predict_abp_f4[0]  # f4预测的DBP
+        # f4_DBP_value = min(predict_abp_f4)
         f4_SBP_value = max(predict_abp_f4)  # f4预测的SBP
         PP = f4_SBP_value - f4_DBP_value
         DBP_AE = abs(f4_DBP_value - origin_DBP_value)
