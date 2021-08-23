@@ -6,6 +6,7 @@ from scipy import signal
 import numpy as np
 from scipy.fftpack import fft, ifft
 from SphygmoCorData import SphygmoCorHelper
+from Plt import Plt
 
 if __name__ == "__main__":
     mimicHelper = MIMICHelper()
@@ -23,13 +24,13 @@ if __name__ == "__main__":
 
     # 读取ppg聚类中心波形
     # centers = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_JAVA_1000_PATH + "center.cluster")
-    centers = mimicHelper.readFromFileFloat(sphygmoCorHelper.JAVA_1000_PATH + "center.cluster")
+    centers = mimicHelper.readFromFileFloat(sphygmoCorHelper.JAVA_200_PATH + "center.cluster")
 
     # 读取子类索引
     cluster_index = list()
-    for i in range(1000):
+    for i in range(200):
         # index = mimicHelper.readFromFileInteger(mimicHelper.MIMIC_JAVA_1000_PATH + str(i) + ".cluster")
-        index = mimicHelper.readFromFileInteger(sphygmoCorHelper.JAVA_1000_PATH + str(i) + ".cluster")
+        index = mimicHelper.readFromFileInteger(sphygmoCorHelper.JAVA_200_PATH + str(i) + ".cluster")
         cluster_index.append(index)
 
     # resample至125个点
@@ -167,11 +168,27 @@ if __name__ == "__main__":
     f4_PP_AE_array = []
     f4_PP_RE_array = []
 
+    o_DBP_array = []
+    o_SBP_array = []
+    o_PP_array = []
+    f1_DBP_array = []
+    f1_SBP_array = []
+    f1_PP_array = []
+    f2_DBP_array = []
+    f2_SBP_array = []
+    f2_PP_array = []
+    f3_DBP_array = []
+    f3_SBP_array = []
+    f3_PP_array = []
+    f4_DBP_array = []
+    f4_SBP_array = []
+    f4_PP_array = []
+
     start_time = time.time()
     percentage = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
     percentage_i = 0
-    for i in range(len(abp_data)):
-        if i == int(percentage[percentage_i] * len(abp_data)) - 1:
+    for i in range(len(test_abp_data)):
+        if i == int(percentage[percentage_i] * len(test_abp_data)) - 1:
             end_time = time.time()
             print("计算了" + str(percentage[percentage_i] * 100) + "%数据，耗时：" + str(end_time - start_time))
             percentage_i += 1
@@ -258,6 +275,9 @@ if __name__ == "__main__":
         # origin_SBP_value = max([origin_abp[index] for index in peaks])  # 原数据SBP
         origin_SBP_value = max(origin_abp)
         origin_PP_value = origin_SBP_value - origin_DBP_value
+        o_DBP_array.append(origin_DBP_value)
+        o_SBP_array.append(origin_SBP_value)
+        o_PP_array.append(origin_PP_value)
 
         f1_DBP_value = min(predict_abp_f1)  # f1预测的DBP
         f1_SBP_value = max(predict_abp_f1)
@@ -274,6 +294,9 @@ if __name__ == "__main__":
         f1_SBP_RE_array.append(SBP_RE)
         f1_PP_AE_array.append(PP_AE)
         f1_PP_RE_array.append(PP_RE)
+        f1_DBP_array.append(f1_DBP_value)
+        f1_SBP_array.append(f1_SBP_value)
+        f1_PP_array.append(PP)
 
         f2_DBP_value = predict_abp_f2[0]  # f2预测的DBP
         # f2_DBP_value = min(predict_abp_f2)
@@ -293,6 +316,9 @@ if __name__ == "__main__":
         f2_SBP_RE_array.append(SBP_RE)
         f2_PP_AE_array.append(PP_AE)
         f2_PP_RE_array.append(PP_RE)
+        f2_DBP_array.append(f2_DBP_value)
+        f2_SBP_array.append(f2_SBP_value)
+        f2_PP_array.append(PP)
 
         f3_DBP_value = predict_abp_f3[0]  # f3预测的DBP
         # f3_DBP_value = min(predict_abp_f3)
@@ -312,6 +338,9 @@ if __name__ == "__main__":
         f3_SBP_RE_array.append(SBP_RE)
         f3_PP_AE_array.append(PP_AE)
         f3_PP_RE_array.append(PP_RE)
+        f3_DBP_array.append(f3_DBP_value)
+        f3_SBP_array.append(f3_SBP_value)
+        f3_PP_array.append(PP)
 
         f4_DBP_value = predict_abp_f4[0]  # f4预测的DBP
         # f4_DBP_value = min(predict_abp_f4)
@@ -329,6 +358,9 @@ if __name__ == "__main__":
         f4_SBP_RE_array.append(SBP_RE)
         f4_PP_AE_array.append(PP_AE)
         f4_PP_RE_array.append(PP_RE)
+        f4_DBP_array.append(f4_DBP_value)
+        f4_SBP_array.append(f4_SBP_value)
+        f4_PP_array.append(PP)
     end_time = time.time()
     print("预测时间：" + str(end_time - start_time))
 
@@ -403,3 +435,26 @@ if __name__ == "__main__":
     print("PP RE:    %.2f±%.2f   %.2f±%.2f    %.2f±%.2f    %.2f±%.2f" % (
         f1_PP_RE_mean, f1_PP_RE_std, f2_PP_RE_mean, f2_PP_RE_std, f3_PP_RE_mean, f3_PP_RE_std, f4_PP_RE_mean,
         f4_PP_RE_std))
+
+    Plt.prepare()
+    Plt.figure(1)
+    # Plt.plotScatter(o_DBP_array, f2_DBP_array, color='black', xstr="DBP实测值（mmHg）", ystr="DBP估计值（mmHg）",
+    #                 title="DBP估计值和实测值")
+    Plt.plotBox([o_DBP_array, f1_DBP_array, f3_DBP_array, f4_DBP_array, f2_DBP_array], showmeans=True,
+                labels=["Origin", "Shih YT", "Fan", "Wu", "This paper"],
+                title="DBP推测值箱型图", ystr="DBP value(mmHg)",
+                showfliers=False)
+    Plt.figure(2)
+    # Plt.plotScatter(o_SBP_array, f2_SBP_array, color='black', xstr="SBP实测值（mmHg）", ystr="SBP估计值（mmHg）",
+    #                 title="SBP估计值和实测值")
+    Plt.plotBox([o_SBP_array, f1_SBP_array, f3_SBP_array, f4_SBP_array, f2_SBP_array], showmeans=True,
+                labels=["Origin", "Shih YT", "Fan", "Wu", "This paper"],
+                title="SBP推测值箱型图", ystr="SBP value(mmHg)",
+                showfliers=False)
+    Plt.figure(3)
+    # Plt.plotScatter(o_PP_array, f2_PP_array, color='black', xstr="PP实测值（mmHg）", ystr="PP估计值（mmHg）", title="PP估计值和实测值")
+    Plt.plotBox([o_PP_array, f1_PP_array, f3_PP_array, f4_PP_array, f2_PP_array], showmeans=True,
+                labels=["Origin", "Shih YT", "Fan", "Wu", "This paper"],
+                title="PP推测值箱型图", ystr="PP value(mmHg)",
+                showfliers=False)
+    Plt.show()
