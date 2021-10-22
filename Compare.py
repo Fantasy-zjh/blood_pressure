@@ -7,6 +7,7 @@ import numpy as np
 from scipy.fftpack import fft, ifft
 from SphygmoCorData import SphygmoCorHelper
 from Plt import Plt
+from scipy.stats import pearsonr, ttest_rel
 
 if __name__ == "__main__":
     mimicHelper = MIMICHelper()
@@ -24,13 +25,13 @@ if __name__ == "__main__":
 
     # 读取ppg聚类中心波形
     # centers = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_JAVA_1000_PATH + "center.cluster")
-    centers = mimicHelper.readFromFileFloat(sphygmoCorHelper.JAVA_200_PATH + "center.cluster")
+    centers = mimicHelper.readFromFileFloat(sphygmoCorHelper.JAVA_1000_PATH + "center.cluster")
 
     # 读取子类索引
     cluster_index = list()
-    for i in range(200):
+    for i in range(1000):
         # index = mimicHelper.readFromFileInteger(mimicHelper.MIMIC_JAVA_1000_PATH + str(i) + ".cluster")
-        index = mimicHelper.readFromFileInteger(sphygmoCorHelper.JAVA_200_PATH + str(i) + ".cluster")
+        index = mimicHelper.readFromFileInteger(sphygmoCorHelper.JAVA_1000_PATH + str(i) + ".cluster")
         cluster_index.append(index)
 
     # resample至125个点
@@ -436,25 +437,62 @@ if __name__ == "__main__":
         f1_PP_RE_mean, f1_PP_RE_std, f2_PP_RE_mean, f2_PP_RE_std, f3_PP_RE_mean, f3_PP_RE_std, f4_PP_RE_mean,
         f4_PP_RE_std))
 
-    Plt.prepare()
-    Plt.figure(1)
-    # Plt.plotScatter(o_DBP_array, f2_DBP_array, color='black', xstr="DBP实测值（mmHg）", ystr="DBP估计值（mmHg）",
-    #                 title="DBP估计值和实测值")
-    Plt.plotBox([o_DBP_array, f1_DBP_array, f3_DBP_array, f4_DBP_array, f2_DBP_array], showmeans=True,
-                labels=["Origin", "Shih YT", "Fan", "Wu", "This paper"],
-                title="DBP推测值箱型图", ystr="DBP value(mmHg)",
-                showfliers=False)
-    Plt.figure(2)
-    # Plt.plotScatter(o_SBP_array, f2_SBP_array, color='black', xstr="SBP实测值（mmHg）", ystr="SBP估计值（mmHg）",
-    #                 title="SBP估计值和实测值")
-    Plt.plotBox([o_SBP_array, f1_SBP_array, f3_SBP_array, f4_SBP_array, f2_SBP_array], showmeans=True,
-                labels=["Origin", "Shih YT", "Fan", "Wu", "This paper"],
-                title="SBP推测值箱型图", ystr="SBP value(mmHg)",
-                showfliers=False)
-    Plt.figure(3)
-    # Plt.plotScatter(o_PP_array, f2_PP_array, color='black', xstr="PP实测值（mmHg）", ystr="PP估计值（mmHg）", title="PP估计值和实测值")
-    Plt.plotBox([o_PP_array, f1_PP_array, f3_PP_array, f4_PP_array, f2_PP_array], showmeans=True,
-                labels=["Origin", "Shih YT", "Fan", "Wu", "This paper"],
-                title="PP推测值箱型图", ystr="PP value(mmHg)",
-                showfliers=False)
-    Plt.show()
+    pearson_result = pearsonr(o_DBP_array, f2_DBP_array)
+    print("DBP pearson:" + str(pearson_result))
+    pearson_result = pearsonr(o_SBP_array, f2_SBP_array)
+    print("SBP pearson:" + str(pearson_result))
+    pearson_result = pearsonr(o_PP_array, f2_PP_array)
+    print("PP pearson:" + str(pearson_result))
+
+    t_result = ttest_rel(o_DBP_array, f2_DBP_array)
+    print("DBP t:" + str(t_result))
+    t_result = ttest_rel(o_SBP_array, f2_SBP_array)
+    print("SBP t:" + str(t_result))
+    t_result = ttest_rel(o_PP_array, f2_PP_array)
+    print("PP t:" + str(t_result))
+
+    np_o_DBP_array = np.array(o_DBP_array)
+    np_o_SBP_array = np.array(o_SBP_array)
+    np_o_PP_array = np.array(o_PP_array)
+    np_f2_DBP_array = np.array(f2_DBP_array)
+    np_f2_SBP_array = np.array(f2_SBP_array)
+    np_f2_PP_array = np.array(f2_PP_array)
+    np_f2_DBP_diff_array = np_f2_DBP_array - np_o_DBP_array
+    np_f2_SBP_diff_array = np_f2_SBP_array - np_o_SBP_array
+    np_f2_PP_diff_array = np_f2_PP_array - np_o_PP_array
+    print("DBP est:" + str(np_f2_DBP_array.mean()) + "+-" + str(np_f2_DBP_array.std()) + "   mea:" + str(
+        np_o_DBP_array.mean()) + "+-" + str(np_o_DBP_array.std()) + "    " + str(
+        np_f2_DBP_diff_array.mean()) + "+-" + str(np_f2_DBP_diff_array.std()))
+    print("SBP est:" + str(np_f2_SBP_array.mean()) + "+-" + str(np_f2_SBP_array.std()) + "   mea:" + str(
+        np_o_SBP_array.mean()) + "+-" + str(np_o_SBP_array.std()) + "    " + str(
+        np_f2_SBP_diff_array.mean()) + "+-" + str(np_f2_SBP_diff_array.std()))
+    print("PP est:" + str(np_f2_PP_array.mean()) + "+-" + str(np_f2_PP_array.std()) + "   mea:" + str(
+        np_o_PP_array.mean()) + "+-" + str(np_o_PP_array.std()) + "    " + str(np_f2_PP_diff_array.mean()) + "+-" + str(
+        np_f2_PP_diff_array.std()))
+
+    # Plt.prepare()
+    # Plt.figure(1)
+    # Plt.plotScatter(o_DBP_array, f2_DBP_array, color='black', xstr="DBP measured value(mmHg)",
+    #                 ystr="DBP estimated value(mmHg)", text="r=0.963,P<0.001")
+    # Plt.plotBox([o_DBP_array, f1_DBP_array, f3_DBP_array, f4_DBP_array, f2_DBP_array], showmeans=True,
+    #             labels=["Origin", "Shih YT", "Fan", "Wu", "This paper"],
+    #             title="DBP推测值箱型图", ystr="DBP value(mmHg)",
+    #             showfliers=False)
+    # Plt.bland_altman_plot(o_DBP_array, f2_DBP_array, xstr="Mean DBP(mmHg)", ystr="Difference DBP(mmHg)")
+    # Plt.figure(2)
+    # Plt.plotScatter(o_SBP_array, f2_SBP_array, color='black', xstr="SBP measured value(mmHg)",
+    #                 ystr="SBP estimated value(mmHg)", text="r=0.992,P<0.001")
+    # Plt.plotBox([o_SBP_array, f1_SBP_array, f3_SBP_array, f4_SBP_array, f2_SBP_array], showmeans=True,
+    #             labels=["Origin", "Shih YT", "Fan", "Wu", "This paper"],
+    #             title="SBP推测值箱型图", ystr="SBP value(mmHg)",
+    #             showfliers=False)
+    # Plt.bland_altman_plot(o_SBP_array, f2_SBP_array, xstr="Mean SBP(mmHg)", ystr="Difference SBP(mmHg)")
+    # Plt.figure(3)
+    # Plt.plotScatter(o_PP_array, f2_PP_array, color='black', xstr="PP measured value(mmHg)",
+    #                 ystr="PP estimated value(mmHg)", text="r=0.958,P<0.001")
+    # Plt.plotBox([o_PP_array, f1_PP_array, f3_PP_array, f4_PP_array, f2_PP_array], showmeans=True,
+    #             labels=["Origin", "Shih YT", "Fan", "Wu", "This paper"],
+    #             title="PP推测值箱型图", ystr="PP value(mmHg)",
+    #             showfliers=False)
+    # Plt.bland_altman_plot(o_PP_array, f2_PP_array, xstr="Mean PP(mmHg)", ystr="Difference PP(mmHg)")
+    # Plt.show()
