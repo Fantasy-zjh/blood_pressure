@@ -8,47 +8,47 @@ from scipy.fftpack import fft, ifft
 from SphygmoCorData import SphygmoCorHelper
 from Plt import Plt
 from scipy.stats import pearsonr, ttest_rel
+from FileHelper import FileHelper
 
 if __name__ == "__main__":
     mimicHelper = MIMICHelper()
     sphygmoCorHelper = SphygmoCorHelper()
 
     # 读取原始的未处理的abp和ppg波形
-    ppg_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TRAIN_PATH + "bbp_train_73.blood")
-    abp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TRAIN_PATH + "abp_train_73.blood")
-    test_ppg_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TEST_PATH + "bbp_test_73.blood")
-    test_abp_data = mimicHelper.readFromFileFloat(sphygmoCorHelper.SPHYGMOCOR_TEST_PATH + "abp_test_73.blood")
-    # ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_TRAIN_DATA_PATH + "ppg_train_73.blood")
-    # abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_TRAIN_DATA_PATH + "abp_train_73.blood")
-    # test_ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_TEST_DATA_PATH + "ppg_test_73.blood")
-    # test_abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_TEST_DATA_PATH + "abp_test_73.blood")
+    readPath = mimicHelper.NEW_CLUSTER_ORIGINAL
+    ppg_data = FileHelper.readFromFileFloat(readPath + "ppg_train.blood")
+    abp_data = FileHelper.readFromFileFloat(readPath + "abp_train.blood")
+    test_ppg_data = FileHelper.readFromFileFloat(readPath + "ppg_test.blood")
+    test_abp_data = FileHelper.readFromFileFloat(readPath + "abp_test.blood")
+    # print(len(ppg_data[0]))
+    # print(len(test_ppg_data[0]))
 
+    cluster_num = 5000
     # 读取ppg聚类中心波形
-    # centers = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_JAVA_1000_PATH + "center.cluster")
-    centers = mimicHelper.readFromFileFloat(sphygmoCorHelper.JAVA_1000_PATH + "center.cluster")
+    centers = FileHelper.readFromFileFloat(readPath + "java_" + str(cluster_num) + "\\center.cluster")
 
     # 读取子类索引
     cluster_index = list()
-    for i in range(1000):
-        # index = mimicHelper.readFromFileInteger(mimicHelper.MIMIC_JAVA_1000_PATH + str(i) + ".cluster")
-        index = mimicHelper.readFromFileInteger(sphygmoCorHelper.JAVA_1000_PATH + str(i) + ".cluster")
+    for i in range(cluster_num):
+        index = FileHelper.readFromFileInteger(
+            readPath + "java_" + str(cluster_num) + "\\" + str(i) + ".cluster")
         cluster_index.append(index)
 
     # resample至125个点
     N = 125
-    abp_data_125 = list()
-    ppg_data_125 = list()
-    test_abp_data_125 = list()
-    test_ppg_data_125 = list()
-    for i in range(len(abp_data)):
-        abp_125 = signal.resample(abp_data[i], N).tolist()
-        ppg_125 = signal.resample(ppg_data[i], N).tolist()
-        test_abp_125 = signal.resample(abp_data[i], N).tolist()
-        test_ppg_125 = signal.resample(ppg_data[i], N).tolist()
-        abp_data_125.append(abp_125)
-        ppg_data_125.append(ppg_125)
-        test_abp_data_125.append(test_abp_125)
-        test_ppg_data_125.append(test_ppg_125)
+    # abp_data_125 = list()
+    # ppg_data_125 = list()
+    # test_abp_data_125 = list()
+    # test_ppg_data_125 = list()
+    # for i in range(len(abp_data)):
+    #     abp_125 = signal.resample(abp_data[i], N).tolist()
+    #     ppg_125 = signal.resample(ppg_data[i], N).tolist()
+    #     test_abp_125 = signal.resample(abp_data[i], N).tolist()
+    #     test_ppg_125 = signal.resample(ppg_data[i], N).tolist()
+    #     abp_data_125.append(abp_125)
+    #     ppg_data_125.append(ppg_125)
+    #     test_abp_data_125.append(test_abp_125)
+    #     test_ppg_data_125.append(test_ppg_125)
     t = np.linspace(0.0, 2 * np.pi, N)
 
     # 计算聚类中心对应的中心动脉压的平均波形
@@ -57,7 +57,7 @@ if __name__ == "__main__":
         num = len(cluster_index[i])
         abp_center = np.zeros(N)
         for j in range(num):
-            abp_center = abp_center + np.array(abp_data_125[cluster_index[i][j]])
+            abp_center = abp_center + np.array(abp_data[cluster_index[i][j]])
         abp_center = abp_center / num
         centers_abp.append(abp_center.tolist())
     # 计算全部中心动脉压的平均波形
@@ -73,8 +73,8 @@ if __name__ == "__main__":
         fft_ABP = list()
         fft_PPG = list()
         for j in range(row):
-            fft_ABP.append(fft(abp_data_125[cluster_index[i][j]]))
-            fft_PPG.append(fft(ppg_data_125[cluster_index[i][j]]))
+            fft_ABP.append(fft(abp_data[cluster_index[i][j]]))
+            fft_PPG.append(fft(ppg_data[cluster_index[i][j]]))
         # 以1HZ为单位，计算全部模和幅角的均值
         abs_abp = np.zeros(N)
         angle_abp = np.zeros(N)
@@ -97,8 +97,8 @@ if __name__ == "__main__":
         angle_ppg_mean = angle_ppg / row
         # 计算通用传递函数 ppg/abp 模相除，相位相减
         abs_common = np.divide(abs_ppg_mean, abs_abp_mean,
-                               # out=np.array([9999999] * N, dtype='float64'),
-                               # where=abs_abp_mean != 0
+                               out=np.array([9999999] * N, dtype='float64'),
+                               where=abs_abp_mean != 0
                                )
         angle_common = angle_ppg_mean - angle_abp_mean
         f2_abs_common.append(abs_common)
@@ -109,9 +109,9 @@ if __name__ == "__main__":
     f3_ppg_fft_angel = np.zeros(N)
     f3_abp_fft_abs = np.zeros(N)
     f3_abp_fft_angel = np.zeros(N)
-    for i in range(len(abp_data_125)):
-        f3_ppg_fft = fft(ppg_data_125[i])
-        f3_abp_fft = fft(abp_data_125[i])
+    for i in range(len(abp_data)):
+        f3_ppg_fft = fft(ppg_data[i])
+        f3_abp_fft = fft(abp_data[i])
         # abs要除以N/2
         tmp_abs = np.abs(f3_ppg_fft)
         tmp_abs = tmp_abs / N * 2
@@ -123,18 +123,22 @@ if __name__ == "__main__":
         f3_abp_fft_abs += tmp_abs
         f3_ppg_fft_angel += np.angle(f3_ppg_fft)
         f3_abp_fft_angel += np.angle(f3_abp_fft)
-    f3_ppg_fft_abs_mean = f3_ppg_fft_abs / len(abp_data_125)
-    f3_ppg_fft_angel_mean = f3_ppg_fft_angel / len(abp_data_125)
-    f3_abp_fft_abs_mean = f3_abp_fft_abs / len(abp_data_125)
-    f3_abp_fft_angel_mean = f3_abp_fft_angel / len(abp_data_125)
+    f3_ppg_fft_abs_mean = f3_ppg_fft_abs / len(abp_data)
+    f3_ppg_fft_angel_mean = f3_ppg_fft_angel / len(abp_data)
+    f3_abp_fft_abs_mean = f3_abp_fft_abs / len(abp_data)
+    f3_abp_fft_angel_mean = f3_abp_fft_angel / len(abp_data)
     f3_abs_common = np.divide(f3_ppg_fft_abs_mean, f3_abp_fft_abs_mean,
-                              # out=np.array([9999999] * N, dtype='float64'),
-                              # where=f3_abp_fft_abs_mean != 0
+                              out=np.array([9999999] * N, dtype='float64'),
+                              where=f3_abp_fft_abs_mean != 0
                               )
     f3_angel_common = f3_ppg_fft_angel_mean - f3_abp_fft_angel_mean
 
     # 计算传递函数f4 吴樟洋论文方法 GTF法
-
+    # 时域传递函数
+    f4_transfer_function = list()
+    for i in range(len(cluster_index)):
+        transfer = np.divide(centers[i], centers_abp[i])
+        f4_transfer_function.append(transfer)
     # 预测中心动脉压，拿测试集去预测
     # AE = |est - true| 绝对误差
     # RE = |est - true| / true 相对误差
@@ -193,8 +197,8 @@ if __name__ == "__main__":
             end_time = time.time()
             print("计算了" + str(percentage[percentage_i] * 100) + "%数据，耗时：" + str(end_time - start_time))
             percentage_i += 1
-        origin_ppg = test_ppg_data_125[i]  # 测试集原始ppg
-        origin_abp = test_abp_data_125[i]  # 测试集原始abp
+        origin_ppg = test_ppg_data[i]  # 测试集原始ppg
+        origin_abp = test_abp_data[i]  # 测试集原始abp
         # 计算该ppg属于哪一类聚类，索引值是index
         min_dis = 99999
         index = 0
@@ -228,8 +232,8 @@ if __name__ == "__main__":
         f2_common_abs = np.array(f2_abs_common[index])
         f2_common_angel = np.array(f2_angle_common[index])
         f2_predict_abs = np.divide(tmp_abs, f2_common_abs,
-                                   # out=np.array(centers_abp[index], dtype='float64'),
-                                   # where=f2_common_abs != 0
+                                   out=np.array(centers_abp[index], dtype='float64'),
+                                   where=f2_common_abs != 0
                                    )  # 用聚类中心的平均中心动脉压作为预测的补充值
         f2_predict_angel = origin_ppg_angel - f2_common_angel
         predict_abp_f2 = f2_predict_abs[0]
@@ -237,23 +241,23 @@ if __name__ == "__main__":
             predict_abp_f2 += f2_predict_abs[k] * np.cos(k * t + f2_predict_angel[k])
         # f3预测
         f3_predict_abs = np.divide(tmp_abs, f3_abs_common,
-                                   # out=np.array(all_centers_abp, dtype='float64'),
-                                   # where=f3_abs_common != 0
+                                   out=np.array(all_centers_abp, dtype='float64'),
+                                   where=f3_abs_common != 0
                                    )
         f3_predict_angel = origin_ppg_angel - f3_angel_common
         predict_abp_f3 = f3_predict_abs[0]
         for k in range(1, len(f3_predict_abs)):
             predict_abp_f3 += f3_predict_abs[k] * np.cos(k * t + f3_predict_angel[k])
         # f4预测，用f3的就可以，最后只取前10次谐波
-        f4_predict_abs = np.divide(tmp_abs, f3_abs_common,
-                                   # out=np.array(all_centers_abp, dtype='float64'),
-                                   # where=f3_abs_common != 0
-                                   )
-        f4_predict_angel = origin_ppg_angel - f3_angel_common
-        predict_abp_f4 = f4_predict_abs[0]
-        for k in range(1, 11):
-            predict_abp_f4 += f4_predict_abs[k] * np.cos(k * t + f4_predict_angel[k])
-
+        # f4_predict_abs = np.divide(tmp_abs, f3_abs_common,
+        #                            # out=np.array(all_centers_abp, dtype='float64'),
+        #                            # where=f3_abs_common != 0
+        #                            )
+        # f4_predict_angel = origin_ppg_angel - f3_angel_common
+        # predict_abp_f4 = f4_predict_abs[0]
+        # for k in range(1, 11):
+        #     predict_abp_f4 += f4_predict_abs[k] * np.cos(k * t + f4_predict_angel[k])
+        predict_abp_f4 = np.divide(origin_ppg, f4_transfer_function[index])
         # 展示一下各个预测值
         # plt.figure(figsize=(8, 4), dpi=200)
         # plt.suptitle(str(i), fontsize=16)
@@ -276,6 +280,8 @@ if __name__ == "__main__":
         # origin_SBP_value = max([origin_abp[index] for index in peaks])  # 原数据SBP
         origin_SBP_value = max(origin_abp)
         origin_PP_value = origin_SBP_value - origin_DBP_value
+        if origin_PP_value == 0:
+            continue
         o_DBP_array.append(origin_DBP_value)
         o_SBP_array.append(origin_SBP_value)
         o_PP_array.append(origin_PP_value)

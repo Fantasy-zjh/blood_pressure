@@ -5,13 +5,14 @@ import time
 from AnomalyDetector import AnomalyDetector
 from scipy import signal
 from WaveletDenoising import wavelet_noising
+from FileHelper import FileHelper
+from detecta import detect_peaks
 
 if __name__ == "__main__":
-    mimicHelper = MIMICHelper()
     start_time = time.time()
-    abp_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_DATA_PATH + "abp.blood")
-    ppg_data = mimicHelper.readFromFileFloat(mimicHelper.MIMIC_DATA_PATH + "ppg.blood")
-    invalid_index = mimicHelper.readFromFileInteger(mimicHelper.ANOMALY_DATA_PATH + "invalid_index.blood")
+    abp_data = FileHelper.readFromFileFloat(MIMICHelper.NEW_CLUSTER + "abp_train.blood")
+    ppg_data = FileHelper.readFromFileFloat(MIMICHelper.NEW_CLUSTER + "ppg_train.blood")
+    # invalid_index = mimicHelper.readFromFileInteger(mimicHelper.ANOMALY_DATA_PATH + "invalid_index.blood")
     # bbp_data, abp_data = SphygmoCorHelper.readSphygmoCorData()
     end_time = time.time()
     # print("行：" + str(len(abp_data)))  #11808
@@ -22,10 +23,7 @@ if __name__ == "__main__":
     fig = 1
     count = 1
     zero = 1
-    zidingyi = [1907, 1925, 1939, 1778, 1839, 1704, 1723, 1733, 1591, 1475, 1518, 1434, 1415, 1422, 1447, 1230, 1182,
-                673, 479, 484, 526, ]
-    # for i in range(len(abp_data)):
-    for i in zidingyi:
+    for i in range(len(abp_data)):
         # 跳过异常值
         # if i not in invalid_index:
         #     continue
@@ -61,21 +59,51 @@ if __name__ == "__main__":
         plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
         plt.rcParams['axes.unicode_minus'] = False
 
+        # # 找波峰还算准确
+        # ppg_ind_p = detect_peaks(ppg_data[i], valley=False, show=False, mpd=50)
+        # abp_ind_p = detect_peaks(abp_data[i], valley=False, show=False, mpd=50)
+        # # 波峰前是波谷
+        # ppg_ind_v = []
+        # abp_ind_v = []
+        # jump = False
+        # for index in ppg_ind_p:
+        #     v_index = index
+        #     for j in range(index-1, -1, -1):
+        #         if ppg_data[i][j] < ppg_data[i][j+1]:
+        #             v_index = j
+        #         else:
+        #             break
+        #     if v_index != index and abs(v_index - index) > 10:
+        #         ppg_ind_v.append(v_index)
+        #     else:
+        #         jump = True
+        # for index in abp_ind_p:
+        #     v_index = index
+        #     for j in range(index-1, -1, -1):
+        #         if abp_data[i][j] < abp_data[i][j+1]:
+        #             v_index = j
+        #         else:
+        #             break
+        #     if v_index != index and abs(v_index - index) > 10:
+        #         abp_ind_v.append(v_index)
+        #     else:
+        #         jump = True
+        # if jump:
+        #     continue
+
         plt.subplot(8, 4, count)
         plt.title("ppg_" + str(i))
         # plt.ylabel('P/mmHg')
         plt.plot(ppg_data[i])
-        # for j in range(len(valleys_index1)):
-        # plt.plot(valleys_index1[2], ppg_data[i][valleys_index1[2]], 'o', color='red')
-        # plt.plot(valleys_index1[3], ppg_data[i][valleys_index1[3]], 'o', color='red')
+        # for j in range(len(ppg_ind_v)):
+        #     plt.plot(ppg_ind_v[j], ppg_data[i][ppg_ind_v[j]], 'o', color='red')
 
         plt.subplot(8, 4, count + 4)
         plt.title("abp_" + str(i))
         # plt.ylabel('P/mmHg')
         plt.plot(abp_data[i])
-        # for j in range(len(valleys_index2)):
-        # plt.plot(valleys_index2[2], abp_data[i][valleys_index2[2]], 'o', color='red')
-        # plt.plot(valleys_index2[3], abp_data[i][valleys_index2[3]], 'o', color='red')
+        # for j in range(len(abp_ind_v)):
+        #     plt.plot(abp_ind_v[j], abp_data[i][abp_ind_v[j]], 'o', color='red')
 
         count += 1
         zero += 1

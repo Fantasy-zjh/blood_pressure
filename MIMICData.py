@@ -25,6 +25,9 @@ class MIMICHelper:
 
     # 新路径
     NEW_ONE_HOME = MIMIC_FILE_PATH + "extract\\newone\\"
+    NEW_CLUSTER = NEW_ONE_HOME + "cluster\\"
+    NEW_CLUSTER_ORIGINAL = NEW_ONE_HOME + "cluster_original\\"
+    NEW_CLUSTER_USE_CNN_DATA = NEW_ONE_HOME + "cluster_usecnndata\\"
 
     # 读取最原始的MIMIC数据
     @staticmethod
@@ -269,11 +272,183 @@ class MIMICHelper:
         FileHelper.writeToFile(ecg_test, MIMICHelper.NEW_ONE_HOME + "ecg_test.blood")
         FileHelper.writeToFile(Y_test, MIMICHelper.NEW_ONE_HOME + "Y_test.blood")
 
+    # 给聚类方法弄点数据集出来
+    @staticmethod
+    def makeClusterDataset():
+        ppg_train_data = FileHelper.readFromFileFloat(MIMICHelper.NEW_ONE_HOME + "ppg_train.blood")
+        abp_train_data = FileHelper.readFromFileFloat(MIMICHelper.NEW_ONE_HOME + "abp_train.blood")
+        ppg_test_data = FileHelper.readFromFileFloat(MIMICHelper.NEW_ONE_HOME + "ppg_test.blood")
+        abp_test_data = FileHelper.readFromFileFloat(MIMICHelper.NEW_ONE_HOME + "abp_test.blood")
+        ppg_train_result = []
+        abp_train_result = []
+        ppg_test_result = []
+        abp_test_result = []
+        for i in range(len(ppg_train_data)):
+            ppg_train = ppg_train_data[i]
+            abp_train = abp_train_data[i]
+
+            ppg_ind_p = detect_peaks(ppg_train, valley=False, show=False, mpd=50)
+            abp_ind_p = detect_peaks(abp_train, valley=False, show=False, mpd=50)
+
+            ppg_ind_v = []
+            abp_ind_v = []
+            jump = False
+            for index in ppg_ind_p:
+                v_index = index
+                for j in range(index - 1, -1, -1):
+                    if ppg_train[j] < ppg_train[j + 1]:
+                        v_index = j
+                    else:
+                        break
+                if v_index != index and abs(v_index - index) > 10:
+                    ppg_ind_v.append(v_index)
+                else:
+                    jump = True
+            for index in abp_ind_p:
+                v_index = index
+                for j in range(index - 1, -1, -1):
+                    if abp_train[j] < abp_train[j + 1]:
+                        v_index = j
+                    else:
+                        break
+                if v_index != index and abs(v_index - index) > 10:
+                    abp_ind_v.append(v_index)
+                else:
+                    jump = True
+            if jump:
+                continue
+
+            num = min(len(ppg_ind_v), len(abp_ind_v))
+            for j in range(1, num - 1):
+                suit_ppg_train = ppg_train[ppg_ind_v[j]:ppg_ind_v[j + 1] + 1]
+                suit_abp_train = abp_train[abp_ind_v[j]:abp_ind_v[j + 1] + 1]
+
+                if min(suit_ppg_train) < suit_ppg_train[0] and min(suit_ppg_train) < suit_ppg_train[-1]:
+                    continue
+                if min(suit_abp_train) < suit_abp_train[0] and min(suit_abp_train) < suit_abp_train[-1]:
+                    continue
+                ppg_train_result.append(signal.resample(suit_ppg_train, 125).tolist())
+                abp_train_result.append(signal.resample(suit_abp_train, 125).tolist())
+        for i in range(len(ppg_test_data)):
+            ppg_test = ppg_test_data[i]
+            abp_test = abp_test_data[i]
+
+            ppg_ind_p = detect_peaks(ppg_test, valley=False, show=False, mpd=50)
+            abp_ind_p = detect_peaks(abp_test, valley=False, show=False, mpd=50)
+
+            ppg_ind_v = []
+            abp_ind_v = []
+            jump = False
+            for index in ppg_ind_p:
+                v_index = index
+                for j in range(index - 1, -1, -1):
+                    if ppg_test[j] < ppg_test[j + 1]:
+                        v_index = j
+                    else:
+                        break
+                if v_index != index and abs(v_index - index) > 10:
+                    ppg_ind_v.append(v_index)
+                else:
+                    jump = True
+            for index in abp_ind_p:
+                v_index = index
+                for j in range(index - 1, -1, -1):
+                    if abp_test[j] < abp_test[j + 1]:
+                        v_index = j
+                    else:
+                        break
+                if v_index != index and abs(v_index - index) > 10:
+                    abp_ind_v.append(v_index)
+                else:
+                    jump = True
+            if jump:
+                continue
+
+            num = min(len(ppg_ind_v), len(abp_ind_v))
+            for j in range(1, num - 1):
+                suit_ppg_test = ppg_test[ppg_ind_v[j]:ppg_ind_v[j + 1] + 1]
+                suit_abp_test = abp_test[abp_ind_v[j]:abp_ind_v[j + 1] + 1]
+
+                if min(suit_ppg_test) < suit_ppg_test[0] and min(suit_ppg_test) < suit_ppg_test[-1]:
+                    continue
+                if min(suit_abp_test) < suit_abp_test[0] and min(suit_abp_test) < suit_abp_test[-1]:
+                    continue
+                ppg_test_result.append(signal.resample(suit_ppg_test, 125).tolist())
+                abp_test_result.append(signal.resample(suit_abp_test, 125).tolist())
+        # 归一化
+        # for i in range(len(ppg_train_result)):
+        #     Max = max(ppg_train_result[i])
+        #     Min = min(ppg_train_result[i])
+        #     ppg_train_result[i] = [(value - Min) / (Max - Min) for value in ppg_train_result[i]]
+        # for i in range(len(ppg_test_result)):
+        #     Max = max(ppg_test_result[i])
+        #     Min = min(ppg_test_result[i])
+        #     ppg_test_result[i] = [(value - Min) / (Max - Min) for value in ppg_test_result[i]]
+        FileHelper.writeToFile(ppg_train_result, MIMICHelper.NEW_CLUSTER_ORIGINAL + "ppg_train.blood")
+        FileHelper.writeToFile(abp_train_result, MIMICHelper.NEW_CLUSTER_ORIGINAL + "abp_train.blood")
+        FileHelper.writeToFile(ppg_test_result, MIMICHelper.NEW_CLUSTER_ORIGINAL + "ppg_test.blood")
+        FileHelper.writeToFile(abp_test_result, MIMICHelper.NEW_CLUSTER_ORIGINAL + "abp_test.blood")
+
+    # 绘制数据集DBP和SBP的直方图
+    @staticmethod
+    def plotHist():
+        abpData = FileHelper.readFromFileFloat(MIMICHelper.NEW_CLUSTER_ORIGINAL + "abp_train.blood")
+        abpArray = np.array(abpData)
+        DBPs = abpArray[:, 0]
+        SBPs = abpArray.max(axis=1)
+
+        plt.figure(1, figsize=(12, 8))
+        plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
+        plt.rcParams['axes.unicode_minus'] = False
+
+        plt.hist((DBPs, SBPs), bins=20, edgecolor='black', label=["DBP", "SBP"], stacked=True, alpha=0.8)
+        xyFont = {
+            'family': 'Times New Roman',
+            'size': 20
+        }
+        labelFont = {
+            'family': 'Times New Roman',
+            'size': 30
+        }
+        plt.xlabel("Blood Pressure(mmHg)", xyFont)
+        plt.ylabel("Frequency", xyFont)
+        plt.tick_params(labelsize=20)
+        plt.tight_layout()
+        plt.legend(prop=labelFont)
+        plt.show()
+
+    # 绘制去噪前后的数据图
+    @staticmethod
+    def plotWeifen():
+        from WaveletDenoising import wavelet_noising
+        ppgData = FileHelper.readFromFileFloat(MIMICHelper.NEW_ONE_HOME + "ppg.blood")
+        for ppg in ppgData:
+            # ppg2 = [ppg[i+1]-ppg[i] for i in range(len(ppg)-1)]
+            ppgFilter = MIMICHelper.bindPassFilter(ppg)
+            ppgDenoise = wavelet_noising(ppg)
+            plt.figure(1, figsize=(12, 8))
+            plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
+            plt.rcParams['axes.unicode_minus'] = False
+            plt.plot(ppg, label='脉搏波波形', color='blue')
+            # plt.plot(ppg2, label='微分', color='red')
+            plt.plot(ppgFilter, label='滤波', color='red')
+            plt.plot(ppgDenoise, label='小波去噪', color='yellow')
+            labelFont = {
+                # 'family': 'Times New Roman',
+                'size': 30
+            }
+            plt.tick_params(labelsize=20)
+            plt.tight_layout()
+            plt.legend(prop=labelFont, loc='upper right')
+            plt.show()
+
 
 # 心率50-150的话，两个波峰最小距离为50（采样频率125hz）
 if __name__ == "__main__":
     s_t = time.time()
     # MIMICHelper.process()
-    MIMICHelper.splitDataset()
+    # MIMICHelper.splitDataset()
+    # MIMICHelper.makeClusterDataset()
+    # MIMICHelper.plotWeifen()
     e_t = time.time()
     print("耗时{}".format(e_t - s_t))

@@ -171,8 +171,8 @@ class FrequencyNetwork(nn.Module):
         self.Ext1 = []
         for i in range(1, 5):
             self.Ext1.append(
-                nn.Conv1d(in_channels=4, out_channels=4, kernel_size=7, dilation=i, padding=i * 3, dtype=torch.float64))
-        self.Con1 = nn.Conv1d(in_channels=4, out_channels=32, kernel_size=9, stride=1, padding=4, dtype=torch.float64)
+                nn.Conv1d(in_channels=2, out_channels=2, kernel_size=7, dilation=i, padding=i * 3, dtype=torch.float64))
+        self.Con1 = nn.Conv1d(in_channels=2, out_channels=32, kernel_size=7, stride=1, padding=3, dtype=torch.float64)
         self.Ext2 = []
         for i in range(1, 5):
             self.Ext2.append(nn.Conv1d(in_channels=32, out_channels=32, kernel_size=7, dilation=i, padding=i * 3,
@@ -194,10 +194,10 @@ class FrequencyNetwork(nn.Module):
         self.FLowCon2 = nn.Conv1d(in_channels=256, out_channels=2, kernel_size=1, stride=1, dtype=torch.float64)
 
     def forward(self, input):
-        output = torch.cat([ext(input) for ext in self.Ext1], dim=1)  # (16,256)
-        con1x1 = nn.Conv1d(in_channels=16, out_channels=4, kernel_size=1, dtype=torch.float64)
-        output = con1x1(output)  # (4,256)
-        output = self.BRD(output, "4")
+        output = torch.cat([ext(input) for ext in self.Ext1], dim=1)  # (8,256)
+        con1x1 = nn.Conv1d(in_channels=8, out_channels=2, kernel_size=1, dtype=torch.float64)
+        output = con1x1(output)  # (2,256)
+        output = self.BRD(output, "2")
         output = self.Con1(output)  # (32,256)
         output = self.BRD(output, "32")
         output = torch.cat([ext(output) for ext in self.Ext2], dim=1)  # (128,256)
@@ -275,10 +275,21 @@ class TestClass:
 
 
 if __name__ == "__main__":
-    module = CombinedNetwork()
-    a = np.array([i for i in range(6 * 512 * 100)], dtype=np.float_).reshape(100, 6, 512)
-    a = torch.from_numpy(a)
-    b = np.array([i for i in range(4 * 256 * 100)], dtype=np.float_).reshape(100, 4, 256)
-    b = torch.from_numpy(b)
-    output, Lt, Lf = module.forward(a, b)
-    print(a.shape)
+    # module = CombinedNetwork()
+    # a = np.array([i for i in range(6 * 512 * 100)], dtype=np.float_).reshape(100, 6, 512)
+    # a = torch.from_numpy(a)
+    # b = np.array([i for i in range(2 * 256 * 100)], dtype=np.float_).reshape(100, 2, 256)
+    # b = torch.from_numpy(b)
+    # output, Lt, Lf = module.forward(a, b)
+    # print(a.shape)
+
+    abpdata = FileHelper.readFromFileFloat(MIMICHelper.NEW_ONE_HOME + "abp_train.blood")[0]
+    print("len of abpdata = {}".format(len(abpdata)))
+    fft_data = fft(abpdata)
+    abs_data = np.abs(fft_data)
+    print("len of abs = {}   type=".format(len(abs_data), type(abs_data)))
+    draw_data = abs_data
+    Plt.prepare()
+    Plt.figure(1)
+    Plt.plotLiner(x_data=[index for index in range(len(draw_data))], y_data=draw_data)
+    Plt.show()

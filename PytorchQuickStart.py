@@ -21,7 +21,9 @@ PyTorch has two `primitives to work with data <https://pytorch.org/docs/stable/d
 the ``Dataset``.
 
 """
+import time
 
+import numpy
 import torch
 from torch import nn, Tensor
 from torch.utils.data import DataLoader, Dataset
@@ -35,6 +37,11 @@ from scipy.fftpack import fft
 from torch.fft import rfftn, irfftn
 from functools import partial
 import torch.nn.functional as f
+from tensorboardX import SummaryWriter
+from detecta import detect_peaks
+from scipy import signal
+import KmeansPlus
+from Plt import Plt
 
 ######################################################################
 # --------------
@@ -157,13 +164,14 @@ class CustomDataset(Dataset):
         time = 512 / 125
         tseq = [i * (time / 512) for i in range(512)]
         ppg = self.ppgdata[item]
+        wave = self.cutWave(ppg)
         ppg_deriv1d = self.cal_deriv(tseq, ppg)
         ppg_deriv2d = self.cal_deriv(tseq, ppg_deriv1d)
         ecg = self.ecgdata[item]
         ecg_deriv1d = self.cal_deriv(tseq, ecg)
         ecg_deriv2d = self.cal_deriv(tseq, ecg_deriv1d)
-        ppg_fft = fft(ppg)[:256]
-        ecg_fft = fft(ecg)[:256]
+        ppg_fft = fft(ppg)
+        ecg_fft = fft(ecg)
 
         ppg = np.array(ppg, dtype=np.float_).reshape(1, 512)
         ppg_deriv1d = np.array(ppg_deriv1d, dtype=np.float_).reshape(1, 512)
@@ -171,19 +179,20 @@ class CustomDataset(Dataset):
         ecg = np.array(ecg, dtype=np.float_).reshape(1, 512)
         ecg_deriv1d = np.array(ecg_deriv1d, dtype=np.float_).reshape(1, 512)
         ecg_deriv2d = np.array(ecg_deriv2d, dtype=np.float_).reshape(1, 512)
-        ppg_real = np.array(ppg_fft).real.reshape(1, 256)
-        ppg_imag = np.array(ppg_fft).imag.reshape(1, 256)
-        ecg_real = np.array(ecg_fft).real.reshape(1, 256)
-        ecg_imag = np.array(ecg_fft).imag.reshape(1, 256)
+        # ppg_real = np.array(ppg_fft).real.reshape(1, 256)
+        # ppg_imag = np.array(ppg_fft).imag.reshape(1, 256)
+        # ecg_real = np.array(ecg_fft).real.reshape(1, 256)
+        # ecg_imag = np.array(ecg_fft).imag.reshape(1, 256)
+        ppg_abs = np.array(np.abs(ppg_fft)[:256]).reshape(1, 256)
+        ecg_abs = np.array(np.abs(ecg_fft)[:256]).reshape(1, 256)
 
         timeSample = torch.cat(
             [torch.from_numpy(ppg), torch.from_numpy(ppg_deriv1d), torch.from_numpy(ppg_deriv2d), torch.from_numpy(ecg),
              torch.from_numpy(ecg_deriv1d), torch.from_numpy(ecg_deriv2d)], dim=0)
-        freqSample = torch.cat([torch.from_numpy(ppg_real), torch.from_numpy(ppg_imag), torch.from_numpy(ecg_real),
-                                torch.from_numpy(ecg_imag)], dim=0)
+        freqSample = torch.cat([torch.from_numpy(ppg_abs), torch.from_numpy(ecg_abs), ], dim=0)
         Y = np.array(self.Ydata[item], dtype=np.float_).reshape(2, 1)
         # print("get item shape:{}".format(Y.shape))
-        return timeSample, freqSample, torch.from_numpy(Y)
+        return timeSample, freqSample, torch.from_numpy(Y), wave
 
     # 定义计算离散点导数的函数
     def cal_deriv(self, x, y):  # x, y的类型均为列表
@@ -206,6 +215,39 @@ class CustomDataset(Dataset):
         deriv.append(slopes[-1])  # (右)端点的导数即为与其最近点的斜率
 
         return deriv  # 返回存储一阶导数结果的列表
+
+    # 截取单周期波形
+    def cutWave(self, wave):
+        ret = wave
+        ind_p = detect_peaks(wave, valley=False, show=False, mpd=50)
+        ind_v = []
+        jump = False
+        for index in ind_p:
+            v_index = index
+            for j in range(index - 1, -1, -1):
+                if wave[j] < wave[j + 1]:
+                    v_index = j
+                else:
+                    break
+            if v_index != index and abs(v_index - index) > 10:
+                ind_v.append(v_index)
+            else:
+                jump = True
+        if jump:
+            ind_p = detect_peaks(wave, valley=True, show=False, mpd=50)
+            if len(ind_p) > 2:
+                ret = wave[ind_p[1]:ind_p[2]]
+            else:
+                ret = wave[ind_p[0]:ind_p[1]]
+            return signal.resample(ret, 125)
+
+        num = len(ind_v)
+        if num > 2:
+            ret = wave[ind_v[1]:ind_v[2]]
+        else:
+            ret = wave[ind_v[0]:ind_v[1]]
+
+        return signal.resample(ret, 125)
 
 
 ######################################################################
@@ -266,27 +308,35 @@ class TimeNetwork(nn.Module):
                                   device=device)
 
     def forward(self, input):
+        x = input
         output = torch.cat([ext(input) for ext in self.Ext1], dim=1)  # (24,512)
         con1x1 = nn.Conv1d(in_channels=24, out_channels=6, kernel_size=1, dtype=torch.float64, device=device)
         output = con1x1(output)  # (6,512)
+        output = output + x
         output = self.BRD(output, "6")
         output = self.Con1(output)  # (32,256)
         output = self.BRD(output, "32")
+        x = output
         output = torch.cat([ext(output) for ext in self.Ext2], dim=1)  # (128,256)
         con1x1 = nn.Conv1d(in_channels=128, out_channels=32, kernel_size=1, dtype=torch.float64, device=device)
         output = con1x1(output)  # (32,256)
+        output = output + x
         output = self.BRD(output, "32")
         output = self.Con2(output)  # (64,128)
         output = self.BRD(output, "64")
+        x = output
         output = torch.cat([ext(output) for ext in self.Ext3], dim=1)  # (256,128)
         con1x1 = nn.Conv1d(in_channels=256, out_channels=64, kernel_size=1, dtype=torch.float64, device=device)
         output = con1x1(output)  # (64,128)
+        output = output + x
         output = self.BRD(output, "64")
         output = self.Con3(output)  # (128,64)
         output = self.BRD(output, "128")
+        x = output
         output = torch.cat([ext(output) for ext in self.Ext4], dim=1)  # (512,64)
         con1x1 = nn.Conv1d(in_channels=512, out_channels=128, kernel_size=1, dtype=torch.float64, device=device)
         output = con1x1(output)  # (128,64)
+        output = output + x
         output = self.BRD(output, "128")
         output = self.Con4(output)  # (256,32)
         output = self.BRD(output, "256")
@@ -317,9 +367,9 @@ class FrequencyNetwork(nn.Module):
         self.Ext1 = []
         for i in range(1, 5):
             self.Ext1.append(
-                nn.Conv1d(in_channels=4, out_channels=4, kernel_size=7, dilation=i, padding=i * 3, dtype=torch.float64,
+                nn.Conv1d(in_channels=2, out_channels=2, kernel_size=7, dilation=i, padding=i * 3, dtype=torch.float64,
                           device=device))
-        self.Con1 = nn.Conv1d(in_channels=4, out_channels=32, kernel_size=9, stride=1, padding=4, dtype=torch.float64,
+        self.Con1 = nn.Conv1d(in_channels=2, out_channels=32, kernel_size=7, stride=1, padding=3, dtype=torch.float64,
                               device=device)
         self.Ext2 = []
         for i in range(1, 5):
@@ -345,27 +395,35 @@ class FrequencyNetwork(nn.Module):
                                   device=device)
 
     def forward(self, input):
-        output = torch.cat([ext(input) for ext in self.Ext1], dim=1)  # (16,256)
-        con1x1 = nn.Conv1d(in_channels=16, out_channels=4, kernel_size=1, dtype=torch.float64, device=device)
-        output = con1x1(output)  # (4,256)
-        output = self.BRD(output, "4")
+        x = input
+        output = torch.cat([ext(input) for ext in self.Ext1], dim=1)  # (8,256)
+        con1x1 = nn.Conv1d(in_channels=8, out_channels=2, kernel_size=1, dtype=torch.float64, device=device)
+        output = con1x1(output)  # (2,256)
+        output = output + x
+        output = self.BRD(output, "2")
         output = self.Con1(output)  # (32,256)
         output = self.BRD(output, "32")
+        x = output
         output = torch.cat([ext(output) for ext in self.Ext2], dim=1)  # (128,256)
         con1x1 = nn.Conv1d(in_channels=128, out_channels=32, kernel_size=1, dtype=torch.float64, device=device)
         output = con1x1(output)  # (32,256)
+        output = output + x
         output = self.BRD(output, "32")
         output = self.Con2(output)  # (64,128)
         output = self.BRD(output, "64")
+        x = output
         output = torch.cat([ext(output) for ext in self.Ext3], dim=1)  # (256,128)
         con1x1 = nn.Conv1d(in_channels=256, out_channels=64, kernel_size=1, dtype=torch.float64, device=device)
         output = con1x1(output)  # (64,128)
+        output = output + x
         output = self.BRD(output, "64")
         output = self.Con3(output)  # (128,64)
         output = self.BRD(output, "128")
+        x = output
         output = torch.cat([ext(output) for ext in self.Ext4], dim=1)  # (512,64)
         con1x1 = nn.Conv1d(in_channels=512, out_channels=128, kernel_size=1, dtype=torch.float64, device=device)
         output = con1x1(output)  # (128,64)
+        output = output + x
         output = self.BRD(output, "128")
         output = self.Con4(output)  # (256,32)
         output = self.BRD(output, "256")
@@ -422,12 +480,12 @@ class CombinedNetwork(nn.Module):
 # In a single training loop, the model makes predictions on the training dataset (fed to it in batches), and
 # backpropagates the prediction error to adjust the model's parameters.
 
-def train(dataloader, model, loss_fn, optimizer, alpha):
+def train(dataloader, model, loss_fn, optimizer, alpha, epoch):
     size = len(dataloader.dataset)
     model.train()
-    for batch, (timeSample, freqSample, Ydata) in enumerate(dataloader):
+    trained_num = 0
+    for batch, (timeSample, freqSample, Ydata, wave) in enumerate(dataloader):
         timeSample, freqSample, Ydata = timeSample.to(device), freqSample.to(device), Ydata.to(device)
-
         # Compute prediction error
         Lc, Lt, Lf = model(timeSample, freqSample)
         loss_c = loss_fn(Lc, Ydata)
@@ -444,17 +502,28 @@ def train(dataloader, model, loss_fn, optimizer, alpha):
             loss, current = loss.item(), batch * len(timeSample)
             print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
 
+        trained_num += batch * len(timeSample)
+        # tensorboardX可视化
+        if epoch:
+            with SummaryWriter(log_dir='./logs', comment='train') as writer:
+                index = trained_num + (epoch - 1) * size
+                # writer.add_histogram('his/timeSample', timeSample, index)
+                # writer.add_histogram('his/freqSample', freqSample, index)
+                writer.add_scalar('train/loss', loss, index)
+
 
 ##############################################################################
 # We also check the model's performance against the test dataset to ensure it is learning.
 
-def test(dataloader, model, loss_fn):
+def test(dataloader, model, loss_fn, epoch):
     size = len(dataloader.dataset)
     num_batches = len(dataloader)
     model.eval()
-    test_loss, SBP_MAE, DBP_MAE = 0, 0, 0
+    test_loss = 0
+    SBP_absolute_diff, DBP_absolute_diff = np.array([]), np.array([])
+    trained_num = 0
     with torch.no_grad():
-        for timeSample, freqSample, Ydata in dataloader:
+        for batch, (timeSample, freqSample, Ydata, wave) in enumerate(dataloader):
             timeSample, freqSample, Ydata = timeSample.to(device), freqSample.to(device), Ydata.to(device)
             Lc, Lt, Lf = model(timeSample, freqSample)
             loss_c = loss_fn(Lc, Ydata)
@@ -462,104 +531,177 @@ def test(dataloader, model, loss_fn):
             loss_f = loss_fn(Lf, Ydata)
             loss = loss_c + alpha * (loss_t + loss_f)
             test_loss += loss.item()
-            Ldiff = torch.sum(torch.abs(Lc - Ydata), dim=0)
-            DBP_MAE += Ldiff[0].item()
-            SBP_MAE += Ldiff[1].item()
+            Ldiff = torch.abs(Lc - Ydata).cpu()
+            DBP_absolute_diff = np.concatenate((DBP_absolute_diff, Ldiff[:, 0, 0].numpy()))
+            SBP_absolute_diff = np.concatenate((SBP_absolute_diff, Ldiff[:, 1, 0].numpy()))
+            trained_num += batch * len(timeSample)
+            # tensorboardX可视化
+            if epoch:
+                with SummaryWriter(log_dir='./logs', comment='test') as writer:
+                    index = trained_num + (epoch - 1) * size
+                    # writer.add_histogram('his/timeSample', timeSample, index)
+                    # writer.add_histogram('his/freqSample', freqSample, index)
+                    writer.add_scalar('test/loss', loss, index)
     test_loss /= num_batches
-    DBP_MAE /= size
-    SBP_MAE /= size
-    print(f"Test Error: \n DBP: {DBP_MAE:>8f}%, SBP: {SBP_MAE:>8f}, Avg loss: {test_loss:>8f} \n")
+    print(
+        f"Test Result: \n DBP: {DBP_absolute_diff.mean():>8f}±{DBP_absolute_diff.std():>8f}, "
+        f"SBP: {SBP_absolute_diff.mean():>8f}±{SBP_absolute_diff.std()}\n "
+        f"Avg loss: {test_loss:>8f} \n")
 
 
-##############################################################################
-# The training process is conducted over several iterations (*epochs*). During each epoch, the model learns
-# parameters to make better predictions. We print the model's accuracy and loss at each epoch; we'd like to see the
-# accuracy increase and the loss decrease with every epoch.
+def testWithCluster(dataloader, model, loss_fn, epoch, d):
+    size = len(dataloader.dataset)
+    num_batches = len(dataloader)
+    model.eval()
+    test_loss = 0
+    SBP_absolute_diff, DBP_absolute_diff = [], []
+    with torch.no_grad():
+        for batch, (timeSample, freqSample, Ydata, wave) in enumerate(dataloader):
+            timeSample, freqSample, Ydata = timeSample.to(device), freqSample.to(device), Ydata.to(device)
+            Lc, Lt, Lf = model(timeSample, freqSample)
+            loss_c = loss_fn(Lc, Ydata)
+            loss_t = loss_fn(Lt, Ydata)
+            loss_f = loss_fn(Lf, Ydata)
+            loss = loss_c + alpha * (loss_t + loss_f)
+            test_loss += loss.item()
 
-# epochs = 5
-# for t in range(epochs):
-#     print(f"Epoch {t + 1}\n-------------------------------")
-#     train(train_dataloader, model, loss_fn, optimizer)
-#     test(test_dataloader, model, loss_fn)
-# print("Done!")
+            L_DBP = Lc[0, 0, 0].cpu().numpy().reshape(1)
+            L_SBP = Lc[0, 1, 0].cpu().numpy().reshape(1)
+            Y_DBP = Ydata[0, 0, 0].cpu().numpy().reshape(1)
+            Y_SBP = Ydata[0, 1, 0].cpu().numpy().reshape(1)
+            wave = wave[0, :].numpy().tolist()
+            # Plt.prepare()
+            # Plt.figure(batch)
+            # Plt.plotLiner([_ for _ in range(125)], wave)
+            # Plt.show()
+            Kmeans_DBP, Kmeans_SBP = caculateCAP(wave)
 
-######################################################################
-# Read more about `Training your model <optimization_tutorial.html>`_.
-#
+            delta = d
+            final_DBP = delta * L_DBP[0] + (1 - delta) * Kmeans_DBP
+            final_SBP = delta * L_SBP[0] + (1 - delta) * Kmeans_SBP
+            # print("LDBP:{}, KDBP:{}, LSBP:{}, KSBP:{}".format(final_DBP, Y_DBP, final_SBP, Y_SBP))
+            DBP_absolute_diff.append(abs(final_DBP - Y_DBP))
+            SBP_absolute_diff.append(abs(final_SBP - Y_SBP))
 
-######################################################################
-# --------------
-#
+    test_loss /= num_batches
+    print(f"delta={d}")
+    print(
+        f"Test Result: \n DBP: {numpy.array(DBP_absolute_diff).mean():>8f}±{numpy.array(DBP_absolute_diff).std():>8f}, "
+        f"SBP: {numpy.array(SBP_absolute_diff).mean():>8f}±{numpy.array(SBP_absolute_diff).std()}\n "
+        f"Avg loss: {test_loss:>8f} \n")
 
-######################################################################
-# Saving Models
-# -------------
-# A common way to save a model is to serialize the internal state dictionary (containing the model parameters).
 
-# torch.save(model.state_dict(), "model.pth")
-# print("Saved PyTorch Model State to model.pth")
+f2_abs_common = list()
+f2_angle_common = list()
+cluster_num = 15000
+readPath = MIMICHelper.NEW_CLUSTER_ORIGINAL
+centers = FileHelper.readFromFileFloat(readPath + "java_" + str(cluster_num) + "\\center.cluster")
 
-######################################################################
-# Loading Models
-# ----------------------------
-#
-# The process for loading a model includes re-creating the model structure and loading
-# the state dictionary into it.
 
-# model = NeuralNetwork()
-# model.load_state_dict(torch.load("model.pth"))
+def caculateTransferFunction():
+    N = 125
+    ppg_data = FileHelper.readFromFileFloat(readPath + "ppg_train.blood")
+    abp_data = FileHelper.readFromFileFloat(readPath + "abp_train.blood")
 
-#############################################################
-# This model can now be used to make predictions.
+    cluster_index = list()
+    for i in range(cluster_num):
+        # index = FileHelper.readFromFileInteger(sphygmoCorHelper.JAVA_1000_PATH + str(i) + ".cluster")
+        index = FileHelper.readFromFileInteger(
+            readPath + "java_" + str(cluster_num) + "\\" + str(i) + ".cluster")
+        cluster_index.append(index)
+    for i in range(len(cluster_index)):
+        row = len(cluster_index[i])
+        fft_ABP = list()
+        fft_PPG = list()
+        for j in range(row):
+            fft_ABP.append(fft(abp_data[cluster_index[i][j]]))
+            fft_PPG.append(fft(ppg_data[cluster_index[i][j]]))
+        # 以1HZ为单位，计算全部模和幅角的均值
+        abs_abp = np.zeros(N)
+        angle_abp = np.zeros(N)
+        abs_ppg = np.zeros(N)
+        angle_ppg = np.zeros(N)
+        for j in range(row):
+            tmp_abs = np.abs(fft_ABP[j])
+            tmp_abs = tmp_abs / N * 2
+            tmp_abs[0] /= 2
+            abs_abp += tmp_abs
+            tmp_abs = np.abs(fft_PPG[j])
+            tmp_abs = tmp_abs / N * 2
+            tmp_abs[0] /= 2
+            abs_ppg += tmp_abs
+            angle_abp += np.angle(fft_ABP[j])
+            angle_ppg += np.angle(fft_PPG[j])
+        abs_abp_mean = abs_abp / row
+        abs_ppg_mean = abs_ppg / row
+        angle_abp_mean = angle_abp / row
+        angle_ppg_mean = angle_ppg / row
+        # 计算通用传递函数 ppg/abp 模相除，相位相减
+        abs_common = np.divide(abs_ppg_mean, abs_abp_mean,
+                               # out=np.array([9999999] * N, dtype='float64'),
+                               # where=abs_abp_mean != 0
+                               )
+        angle_common = angle_ppg_mean - angle_abp_mean
+        f2_abs_common.append(abs_common)
+        f2_angle_common.append(angle_common)
 
-# classes = [
-#     "T-shirt/top",
-#     "Trouser",
-#     "Pullover",
-#     "Dress",
-#     "Coat",
-#     "Sandal",
-#     "Shirt",
-#     "Sneaker",
-#     "Bag",
-#     "Ankle boot",
-# ]
 
-# model.eval()
-# x, y = test_data[0][0], test_data[0][1]
-# with torch.no_grad():
-#     pred = model(x)
-#     predicted, actual = classes[pred[0].argmax(0)], classes[y]
-#     print(f'Predicted: "{predicted}", Actual: "{actual}"')
+def caculateCAP(ppg):
+    # 归一化
+    # Max = max(ppg)
+    # Min = min(ppg)
+    # ppg = [(value - Min) / (Max - Min) for value in ppg]
+    # 计算该ppg属于哪一类聚类，索引值是index
+    min_dis = 99999
+    index = 0
+    for j in range(len(centers)):
+        dis = KmeansPlus.distance(ppg, centers[j])
+        if dis < min_dis:
+            min_dis = dis
+            index = j
+    # 准备测试数据的幅值和相位
+    origin_ppg_fft = fft(ppg)
+    origin_ppg_abs = np.abs(origin_ppg_fft)
+    origin_ppg_angel = np.angle(origin_ppg_fft)
+    tmp_abs = origin_ppg_abs / 125 * 2
+    tmp_abs[0] /= 2
+    # f2预测
+    f2_common_abs = np.array(f2_abs_common[index])
+    f2_common_angel = np.array(f2_angle_common[index])
+    f2_predict_abs = np.divide(tmp_abs, f2_common_abs)
+    f2_predict_angel = origin_ppg_angel - f2_common_angel
+    predict_abp_f2 = f2_predict_abs[0]
+    t = np.linspace(0.0, 2 * np.pi, 125)
+    for k in range(1, 11):
+        predict_abp_f2 += f2_predict_abs[k] * np.cos(k * t + f2_predict_angel[k])
+    return predict_abp_f2[0], max(predict_abp_f2)
 
-######################################################################
-# Read more about `Saving & Loading your model <saveloadrun_tutorial.html>`_.
-#
+
 if __name__ == "__main__":
     ######################################################################
     # We pass the ``Dataset`` as an argument to ``DataLoader``. This wraps an iterable over our dataset, and supports
     # automatic batching, sampling, shuffling and multiprocess data loading. Here we define a batch size of 64, i.e. each element
     # in the dataloader iterable will return a batch of 64 features and labels.
 
-    batch_size = 100
+    batch_size = 500
 
     training_data = CustomDataset(1)
     validate_data = CustomDataset(2)
     test_data = CustomDataset(3)
+    caculateTransferFunction()
     # Create data loaders.
     train_dataloader = DataLoader(training_data, batch_size=batch_size)
     valid_dataloader = DataLoader(validate_data, batch_size=batch_size)
-    test_dataloader = DataLoader(test_data, batch_size=batch_size)
+    test_dataloader = DataLoader(test_data, batch_size=1)
 
-    for timeSample, freqSample, Ydata in test_dataloader:
+    for timeSample, freqSample, Ydata, wave in test_dataloader:
         print("Shape of timeSample [N, C, H, W]: {}, Shape of freqSample [N, C, H, W]: {}".format(timeSample.shape,
                                                                                                   freqSample.shape))
         print("Shape of y: ", Ydata.shape)
         break
 
     model = CombinedNetwork()
-    # model.to(device)
-    model = model.cuda()
+    model.to(device)
     print(model.timeModule.Con1.weight.device)
     #####################################################################
     # Optimizing the Model Parameters
@@ -568,11 +710,26 @@ if __name__ == "__main__":
     # and an `optimizer <https://pytorch.org/docs/stable/optim.html>`_.
 
     loss_fn = nn.L1Loss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, betas=[0.9, 0.999])
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, betas=[0.9, 0.999])
     alpha = 0.2
 
-    epochs = 800
-    for t in range(epochs):
-        print(f"Epoch {t + 1}\n-------------------------------")
-        train(train_dataloader, model, loss_fn, optimizer, alpha)
-        test(valid_dataloader, model, loss_fn)  # 用验证集验证
+    # train
+    # model.load_state_dict(torch.load("model_use_abs_60.pth"))
+    # epochs = 800
+    # for t in range(61, epochs + 1):
+    #     print(f"Epoch {t}\n-------------------------------")
+    #     train(train_dataloader, model, loss_fn, optimizer, alpha, t)
+    #     test(valid_dataloader, model, loss_fn, t)  # 用验证集验证
+    #     if t % 20 == 0:
+    #         torch.save(model.state_dict(), "model_use_abs_" + str(t) + ".pth")
+
+    # test
+    model.load_state_dict(torch.load("model_use_abs_80.pth"))
+    # test(test_dataloader, model, loss_fn, None)
+
+    d = [0.5, 0.4]
+    for _ in d:
+        s_t = time.time()
+        testWithCluster(test_dataloader, model, loss_fn, None, _)
+        e_t = time.time()
+        print(e_t - s_t)

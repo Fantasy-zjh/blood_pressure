@@ -25,7 +25,7 @@ class Plt:
         plt.show()
 
     @staticmethod
-    def doSomethingelse(*args, **kwargs):
+    def doSomethingelse(args, kwargs):
         xstr = kwargs.get("xstr")
         ystr = kwargs.get("ystr")
         title = kwargs.get("title")

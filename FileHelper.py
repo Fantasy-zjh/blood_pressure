@@ -16,7 +16,7 @@ class FileHelper:
                 f.write("\n")
                 cur += 1
                 if cur % 200 == 0:
-                    print("写了：" + str((cur / total) * 100) + "%数据，时间：" + time.strftime('%Y-%m-%d %H:%M:%S',
+                    print("写了：" + str(round((cur / total) * 100, 2)) + "%数据，时间：" + time.strftime('%Y-%m-%d %H:%M:%S',
                                                                                        time.localtime(time.time())))
 
     @staticmethod
@@ -31,7 +31,7 @@ class FileHelper:
                 f.write(str(data[i]))
                 cur += 1
                 if cur % 200 == 0:
-                    print("写了：" + str((cur / total) * 100) + "%数据，时间：" + time.strftime('%Y-%m-%d %H:%M:%S',
+                    print("写了：" + str(round((cur / total) * 100, 2)) + "%数据，时间：" + time.strftime('%Y-%m-%d %H:%M:%S',
                                                                                        time.localtime(time.time())))
 
     @staticmethod
