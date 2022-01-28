@@ -16,7 +16,7 @@ def sgn(num):
 # 小波变换去噪
 def wavelet_noising(data):
     # print("去噪前：" + str(data))
-    w = pywt.Wavelet('sym8')
+    w = pywt.Wavelet('db8')
     # [ca3, cd3, cd2, cd1] = pywt.wavedec(data, w, level=3)  # 分解波
     [ca5, cd5, cd4, cd3, cd2, cd1] = pywt.wavedec(data, w, level=5)  # 分解波
 

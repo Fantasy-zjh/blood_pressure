@@ -9,7 +9,7 @@ class Plt:
         n = 1
         if num is not None:
             n = num
-        plt.figure(n, figsize=(8, 8))
+        plt.figure(n, figsize=(9, 9))
 
     @staticmethod
     def subPlot(integer):
@@ -31,10 +31,14 @@ class Plt:
         title = kwargs.get("title")
         label = kwargs.get("label")
         handles = kwargs.get("handles")
+        xyFont = {
+            'family': 'Times New Roman',
+            'size': 30
+        }
         if xstr:
-            plt.xlabel(xstr, fontsize=30)
+            plt.xlabel(xstr, xyFont)
         if ystr:
-            plt.ylabel(ystr, fontsize=30)
+            plt.ylabel(ystr, xyFont)
         plt.xticks(size=30)
         plt.yticks(size=30)
         if title:
@@ -69,7 +73,7 @@ class Plt:
             if dif < bottom or dif > top:
                 num += 1
         perc = num / total
-        print("{:.5f}".format(perc))
+        print("离异点百分比：{:.5f}  差值均值：{}  上下限：{}---{}".format(perc, md, bottom, top))
         Plt.doSomethingelse(args, kwargs)
 
     # 散点图
@@ -80,7 +84,8 @@ class Plt:
         plt.plot(x_data, x_data, c=color)
         text = kwargs.get("text")
         if text:
-            plt.text(x=min(x_data), y=max(y_data), s=text, fontsize=30)
+            plt.text(x=min(min(x_data), min(y_data)), y=max(max(x_data), max(y_data)), s=text, fontsize=30,
+                     fontdict={'family': 'Times New Roman', 'size': 30})
         Plt.doSomethingelse(args, kwargs)
 
     # 箱型图

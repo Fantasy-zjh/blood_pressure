@@ -17,6 +17,7 @@ from torch.fft import rfftn, irfftn
 from functools import partial
 from scipy.fftpack import fft
 from FileHelper import FileHelper
+import matplotlib.pyplot as plt
 
 
 def complex_matmul(a: Tensor, b: Tensor) -> Tensor:
@@ -275,21 +276,100 @@ class TestClass:
 
 
 if __name__ == "__main__":
-    # module = CombinedNetwork()
-    # a = np.array([i for i in range(6 * 512 * 100)], dtype=np.float_).reshape(100, 6, 512)
-    # a = torch.from_numpy(a)
-    # b = np.array([i for i in range(2 * 256 * 100)], dtype=np.float_).reshape(100, 2, 256)
-    # b = torch.from_numpy(b)
-    # output, Lt, Lf = module.forward(a, b)
-    # print(a.shape)
+    plt.figure(1, figsize=(12, 8))
+    plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
+    plt.rcParams['axes.unicode_minus'] = False
+    xyFont = {
+        # 'family': 'Times New Roman',
+        'size': 20
+    }
+    labelFont = {
+        'family': 'Times New Roman',
+        'size': 20
+    }
+    alpha = [0.0, 0.2, 0.4, 0.6, 0.8]
+    values = [9.88, 9.56, 9.25, 9.41, 9.49]
+    plt.plot(alpha, values, label='SBP', marker='o')
+    for a, b in zip(alpha, values):
+        plt.text(a, b + .2, b, ha='center', va='bottom', fontsize=20)
+    values = [5.41, 5.40, 5.33, 5.46, 5.87]
+    plt.plot(alpha, values, label='DBP', marker='o')
+    for a, b in zip(alpha, values):
+        plt.text(a, b - .3, b, ha='center', va='bottom', fontsize=20)
+    # alpha = [0.0, 0.2, 0.4, 0.6]
+    # values = [11.52, 10.87, 10.68, 10.83]
+    # plt.plot(alpha, values, label='L2(SBP)', marker='o')
+    # for a, b in zip(alpha, values):
+    #     if b in [10.83]:
+    #         plt.text(a, b - .2, b, ha='center', va='bottom', fontsize=20)
+    #     else:
+    #         plt.text(a, b + .2, b, ha='center', va='bottom', fontsize=20)
+    # values = [11.36, 9.88, 10.66, 10.92]
+    # plt.plot(alpha, values, label='L1(SBP)', marker='o')
+    # for a, b in zip(alpha, values):
+    #     if b in [10.92]:
+    #         plt.text(a, b + .2, b, ha='center', va='bottom', fontsize=20)
+    #     else:
+    #         plt.text(a, b - .2, b, ha='center', va='bottom', fontsize=20)
+    # values = [6.17, 5.88, 5.67, 5.94]
+    # plt.plot(alpha, values, label='L2(DBP)', marker='o')
+    # for a, b in zip(alpha, values):
+    #     if b in [5.67]:
+    #         plt.text(a, b - .2, b, ha='center', va='bottom', fontsize=20)
+    #     else:
+    #         plt.text(a, b + .2, b, ha='center', va='bottom', fontsize=20)
+    # values = [6.09, 5.41, 5.73, 5.69]
+    # plt.plot(alpha, values, label='L1(DBP)', marker='o')
+    # for a, b in zip(alpha, values):
+    #     if b in [5.73]:
+    #         plt.text(a, b + .2, b, ha='center', va='bottom', fontsize=20)
+    #     else:
+    #         plt.text(a, b - .2, b, ha='center', va='bottom', fontsize=20)
+    plt.ylabel("预测误差(mmHg)", xyFont)
+    # plt.xlabel(chr(945) + " (辅助损失权重)", xyFont)
+    plt.xlabel(chr(946) + " (聚类模块校准权重)", xyFont)
+    plt.yticks([x for x in range(4, 12)])
+    plt.tick_params(labelsize=20)
+    # 图例放在当前图像下方
+    plt.legend(prop=labelFont, loc='upper center', bbox_to_anchor=(0.5, -0.1),
+               fancybox=True, shadow=True, ncol=5, frameon=False)
+    plt.tight_layout()
+    plt.show()
+    sys.exit()
 
-    abpdata = FileHelper.readFromFileFloat(MIMICHelper.NEW_ONE_HOME + "abp_train.blood")[0]
-    print("len of abpdata = {}".format(len(abpdata)))
-    fft_data = fft(abpdata)
-    abs_data = np.abs(fft_data)
-    print("len of abs = {}   type=".format(len(abs_data), type(abs_data)))
-    draw_data = abs_data
-    Plt.prepare()
-    Plt.figure(1)
-    Plt.plotLiner(x_data=[index for index in range(len(draw_data))], y_data=draw_data)
-    Plt.show()
+    abpdata = FileHelper.readFromFileFloat(MIMICHelper.NEW_ONE_HOME + "abp_train.blood")
+    ppgdata = FileHelper.readFromFileFloat(MIMICHelper.NEW_ONE_HOME + "ppg_train.blood")
+    ecgdata = FileHelper.readFromFileFloat(MIMICHelper.NEW_ONE_HOME + "ecg_train.blood")
+    for i in range(len(abpdata)):
+        plt.figure(5 * i + 1, figsize=(8, 8))
+        plt.plot(abpdata[i])
+        plt.tick_params(labelsize=20)
+        plt.figure(5 * i + 2, figsize=(8, 8))
+        plt.plot(ppgdata[i], color='blue')
+        plt.tick_params(labelsize=20)
+        plt.figure(5 * i + 3, figsize=(8, 8))
+        plt.plot(ecgdata[i], color='orange')
+        plt.tick_params(labelsize=20)
+
+        N = len(ppgdata[i])
+        t = np.linspace(0.0, 2 * np.pi, N)
+
+        _fft = fft(ppgdata[i])
+        _abs = np.abs(_fft)
+        _abs = _abs / N * 2
+        _abs[0] /= 2
+        plt.figure(5 * i + 4, figsize=(8, 8))
+        plt.plot(_abs[:256], color='blue')
+        # plt.stem((np.arange(N) / 2 * np.pi)[:256], _abs[:256], linefmt='blue')
+        plt.tick_params(labelsize=20)
+
+        _fft = fft(ecgdata[i])
+        _abs = np.abs(_fft)
+        _abs = _abs / N * 2
+        _abs[0] /= 2
+        plt.figure(5 * i + 5, figsize=(8, 8))
+        plt.plot(_abs[:256], color='orange')
+        # plt.stem((np.arange(N) / 2 * np.pi)[:256], _abs[:256], linefmt='orange')
+        plt.tick_params(labelsize=20)
+
+        plt.show()

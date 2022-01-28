@@ -7,11 +7,11 @@ from scipy import signal
 from WaveletDenoising import wavelet_noising
 from FileHelper import FileHelper
 from detecta import detect_peaks
-
+#28 35 162 754 755 756
 if __name__ == "__main__":
     start_time = time.time()
-    abp_data = FileHelper.readFromFileFloat(MIMICHelper.NEW_CLUSTER + "abp_train.blood")
-    ppg_data = FileHelper.readFromFileFloat(MIMICHelper.NEW_CLUSTER + "ppg_train.blood")
+    abp_data = FileHelper.readFromFileFloat(MIMICHelper.NEW_ONE_HOME + "abnormal.blood")
+    ppg_data = FileHelper.readFromFileFloat(MIMICHelper.NEW_ONE_HOME + "ppg_train.blood")
     # invalid_index = mimicHelper.readFromFileInteger(mimicHelper.ANOMALY_DATA_PATH + "invalid_index.blood")
     # bbp_data, abp_data = SphygmoCorHelper.readSphygmoCorData()
     end_time = time.time()

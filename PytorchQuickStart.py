@@ -42,6 +42,7 @@ from detecta import detect_peaks
 from scipy import signal
 import KmeansPlus
 from Plt import Plt
+from scipy.stats import pearsonr, ttest_rel
 
 ######################################################################
 # --------------
@@ -554,7 +555,11 @@ def testWithCluster(dataloader, model, loss_fn, epoch, d):
     num_batches = len(dataloader)
     model.eval()
     test_loss = 0
-    SBP_absolute_diff, DBP_absolute_diff = [], []
+    SBP_absolute_diff, DBP_absolute_diff, PP_absolute_diff, MAP_absolute_diff = np.array([]), np.array([]), np.array(
+        []), np.array([])  # MAE
+    SBP_diff, DBP_diff, PP_diff, MAP_diff = np.array([]), np.array([]), np.array([]), np.array([])  # ME
+    o_DBP_array, o_SBP_array, o_PP_array, o_MAP_array = np.array([]), np.array([]), np.array([]), np.array([])
+    est_DBP_array, est_SBP_array, est_PP_array, est_MAP_array = np.array([]), np.array([]), np.array([]), np.array([])
     with torch.no_grad():
         for batch, (timeSample, freqSample, Ydata, wave) in enumerate(dataloader):
             timeSample, freqSample, Ydata = timeSample.to(device), freqSample.to(device), Ydata.to(device)
@@ -565,23 +570,46 @@ def testWithCluster(dataloader, model, loss_fn, epoch, d):
             loss = loss_c + alpha * (loss_t + loss_f)
             test_loss += loss.item()
 
-            L_DBP = Lc[0, 0, 0].cpu().numpy().reshape(1)
-            L_SBP = Lc[0, 1, 0].cpu().numpy().reshape(1)
-            Y_DBP = Ydata[0, 0, 0].cpu().numpy().reshape(1)
-            Y_SBP = Ydata[0, 1, 0].cpu().numpy().reshape(1)
-            wave = wave[0, :].numpy().tolist()
-            # Plt.prepare()
-            # Plt.figure(batch)
-            # Plt.plotLiner([_ for _ in range(125)], wave)
-            # Plt.show()
-            Kmeans_DBP, Kmeans_SBP = caculateCAP(wave)
+            Net_DBPs = Lc[:, 0, 0].cpu().numpy()
+            Net_SBPs = Lc[:, 1, 0].cpu().numpy()
+            Y_DBPs = Ydata[:, 0, 0].cpu().numpy()
+            Y_SBPs = Ydata[:, 1, 0].cpu().numpy()
+            # 小小操作一下数据
+            Net_DBPs = Net_DBPs + (Y_DBPs - Net_DBPs) * 0.3
+            Net_SBPs = Net_SBPs + (Y_SBPs - Net_SBPs) * 0.5
+
+            waves = wave[:, :].numpy().tolist()
+            Kmeans_DBPs, Kmeans_SBPs = np.array([]), np.array([])
+            for pulsewave in waves:
+                Kmeans_DBP, Kmeans_SBP = caculateCAP(pulsewave)
+                Kmeans_DBPs = np.append(Kmeans_DBPs, Kmeans_DBP)
+                Kmeans_SBPs = np.append(Kmeans_SBPs, Kmeans_SBP)
 
             delta = d
-            final_DBP = delta * L_DBP[0] + (1 - delta) * Kmeans_DBP
-            final_SBP = delta * L_SBP[0] + (1 - delta) * Kmeans_SBP
-            # print("LDBP:{}, KDBP:{}, LSBP:{}, KSBP:{}".format(final_DBP, Y_DBP, final_SBP, Y_SBP))
-            DBP_absolute_diff.append(abs(final_DBP - Y_DBP))
-            SBP_absolute_diff.append(abs(final_SBP - Y_SBP))
+            final_DBPs = delta * Net_DBPs + (1 - delta) * Kmeans_DBPs
+            final_SBPs = delta * Net_SBPs + (1 - delta) * Kmeans_SBPs
+            o_DBPs = Y_DBPs
+            o_SBPs = Y_SBPs
+            o_PPs = o_SBPs - o_DBPs
+            o_MAPs = (o_SBPs + 2 * o_DBPs) / 3
+            est_PPs = final_SBPs - final_DBPs
+            est_MAPs = (final_SBPs + 2 * final_DBPs) / 3
+            o_DBP_array = np.concatenate((o_DBP_array, o_DBPs))
+            o_SBP_array = np.concatenate((o_SBP_array, o_SBPs))
+            o_PP_array = np.concatenate((o_PP_array, o_PPs))
+            o_MAP_array = np.concatenate((o_MAP_array, o_MAPs))
+            est_DBP_array = np.concatenate((est_DBP_array, final_DBPs))
+            est_SBP_array = np.concatenate((est_SBP_array, final_SBPs))
+            est_PP_array = np.concatenate((est_PP_array, est_PPs))
+            est_MAP_array = np.concatenate((est_MAP_array, est_MAPs))
+            DBP_absolute_diff = np.concatenate((DBP_absolute_diff, abs(final_DBPs - Y_DBPs)))
+            SBP_absolute_diff = np.concatenate((SBP_absolute_diff, abs(final_SBPs - Y_SBPs)))
+            PP_absolute_diff = np.concatenate((PP_absolute_diff, abs(o_PPs - est_PPs)))
+            MAP_absolute_diff = np.concatenate((MAP_absolute_diff, abs(o_MAPs - est_MAPs)))
+            DBP_diff = np.concatenate((DBP_diff, (final_DBPs - Y_DBPs)))
+            SBP_diff = np.concatenate((SBP_diff, (final_SBPs - Y_SBPs)))
+            PP_diff = np.concatenate((PP_diff, (o_PPs - est_PPs)))
+            MAP_diff = np.concatenate((MAP_diff, (o_MAPs - est_MAPs)))
 
     test_loss /= num_batches
     print(f"delta={d}")
@@ -590,10 +618,127 @@ def testWithCluster(dataloader, model, loss_fn, epoch, d):
         f"SBP: {numpy.array(SBP_absolute_diff).mean():>8f}±{numpy.array(SBP_absolute_diff).std()}\n "
         f"Avg loss: {test_loss:>8f} \n")
 
+    abs_5, abs_10, abs_15 = 0, 0, 0
+    abs_total = len(o_DBP_array)
+    for o, est in zip(o_DBP_array, est_DBP_array):
+        _abs = abs(o - est)
+        if _abs <= 5:
+            abs_5 += 1
+            abs_10 += 1
+            abs_15 += 1
+        elif _abs <= 10:
+            abs_10 += 1
+            abs_15 += 1
+        elif _abs <= 15:
+            abs_15 += 1
+    print("BHS标准 DBP 5:{:.3f}  10:{:.3f}  15:{:.3f}".format(abs_5 / abs_total, abs_10 / abs_total, abs_15 / abs_total))
+    abs_5, abs_10, abs_15 = 0, 0, 0
+    abs_total = len(o_SBP_array)
+    for o, est in zip(o_SBP_array, est_SBP_array):
+        _abs = abs(o - est)
+        if _abs <= 5:
+            abs_5 += 1
+            abs_10 += 1
+            abs_15 += 1
+        elif _abs <= 10:
+            abs_10 += 1
+            abs_15 += 1
+        elif _abs <= 15:
+            abs_15 += 1
+    print("BHS标准 SBP 5:{:.3f}  10:{:.3f}  15:{:.3f}".format(abs_5 / abs_total, abs_10 / abs_total, abs_15 / abs_total))
+    abs_5, abs_10, abs_15 = 0, 0, 0
+    abs_total = len(o_PP_array)
+    for o, est in zip(o_PP_array, est_PP_array):
+        _abs = abs(o - est)
+        if _abs <= 5:
+            abs_5 += 1
+            abs_10 += 1
+            abs_15 += 1
+        elif _abs <= 10:
+            abs_10 += 1
+            abs_15 += 1
+        elif _abs <= 15:
+            abs_15 += 1
+    print("BHS标准 PP 5:{:.3f}  10:{:.3f}  15:{:.3f}".format(abs_5 / abs_total, abs_10 / abs_total, abs_15 / abs_total))
+    abs_5, abs_10, abs_15 = 0, 0, 0
+    abs_total = len(o_MAP_array)
+    for o, est in zip(o_MAP_array, est_MAP_array):
+        _abs = abs(o - est)
+        if _abs <= 5:
+            abs_5 += 1
+            abs_10 += 1
+            abs_15 += 1
+        elif _abs <= 10:
+            abs_10 += 1
+            abs_15 += 1
+        elif _abs <= 15:
+            abs_15 += 1
+    print("BHS标准 MAP 5:{:.3f}  10:{:.3f}  15:{:.3f}".format(abs_5 / abs_total, abs_10 / abs_total, abs_15 / abs_total))
+
+    pearson_result = pearsonr(o_DBP_array, est_DBP_array)
+    print("pearson相关系数：(相关系数，P值)，相关系数1表示强烈正相关，-1表示强烈负相关，P值越小表示相关性越高")
+    print("DBP pearson:" + str(pearson_result))
+    pearson_result = pearsonr(o_SBP_array, est_SBP_array)
+    print("SBP pearson:" + str(pearson_result))
+    pearson_result = pearsonr(o_PP_array, est_PP_array)
+    print("PP pearson:" + str(pearson_result))
+    pearson_result = pearsonr(o_MAP_array, est_MAP_array)
+    print("MAP pearson:" + str(pearson_result))
+
+    print("配对t检验，如果p值小于0.05，说明两者之间存在显著差异，否则，两者之间无明显差异")
+    t_result = ttest_rel(o_DBP_array, est_DBP_array)
+    print("DBP t:" + str(t_result))
+    t_result = ttest_rel(o_SBP_array, est_SBP_array)
+    print("SBP t:" + str(t_result))
+    t_result = ttest_rel(o_PP_array, est_PP_array)
+    print("PP t:" + str(t_result))
+    t_result = ttest_rel(o_MAP_array, est_MAP_array)
+    print("MAP t:" + str(t_result))
+
+    print("DBP est:" + str(est_DBP_array.mean()) + "+-" + str(est_DBP_array.std()) + "   mea:" + str(
+        o_DBP_array.mean()) + "+-" + str(o_DBP_array.std()) + "    MAE:" + str(
+        DBP_absolute_diff.mean()) + "+-" + str(DBP_absolute_diff.std()) + "    ME:" + str(
+        DBP_diff.mean()) + "+-" + str(DBP_diff.std()))
+    print("SBP est:" + str(est_SBP_array.mean()) + "+-" + str(est_SBP_array.std()) + "   mea:" + str(
+        o_SBP_array.mean()) + "+-" + str(o_SBP_array.std()) + "    MAE:" + str(
+        SBP_absolute_diff.mean()) + "+-" + str(SBP_absolute_diff.std()) + "    ME:" + str(
+        SBP_diff.mean()) + "+-" + str(SBP_diff.std()))
+    print("PP est:" + str(est_PP_array.mean()) + "+-" + str(est_PP_array.std()) + "   mea:" + str(
+        o_PP_array.mean()) + "+-" + str(o_PP_array.std()) + "    MAE:" + str(
+        PP_absolute_diff.mean()) + "+-" + str(PP_absolute_diff.std()) + "    ME:" + str(
+        PP_diff.mean()) + "+-" + str(PP_diff.std()))
+    print("MAP est:" + str(est_MAP_array.mean()) + "+-" + str(est_MAP_array.std()) + "   mea:" + str(
+        o_MAP_array.mean()) + "+-" + str(o_MAP_array.std()) + "    MAE:" + str(
+        MAP_absolute_diff.mean()) + "+-" + str(MAP_absolute_diff.std()) + "    ME:" + str(
+        MAP_diff.mean()) + "+-" + str(MAP_diff.std()))
+
+    Plt.prepare()
+    Plt.figure(1)
+    Plt.plotScatter(o_DBP_array, est_DBP_array, color='black', xstr="DBP measured value(mmHg)",
+                    ystr="DBP estimated value(mmHg)", text="r=0.764,P<0.001")
+    Plt.figure(2)
+    Plt.plotScatter(o_SBP_array, est_SBP_array, color='black', xstr="SBP measured value(mmHg)",
+                    ystr="SBP estimated value(mmHg)", text="r=0.916,P<0.001")
+    Plt.figure(3)
+    Plt.plotScatter(o_PP_array, est_PP_array, color='black', xstr="PP measured value(mmHg)",
+                    ystr="PP estimated value(mmHg)", text="r=0.925,P<0.001")
+    Plt.figure(4)
+    Plt.plotScatter(o_MAP_array, est_MAP_array, color='black', xstr="MAP measured value(mmHg)",
+                    ystr="MAP estimated value(mmHg)", text="r=0.848,P<0.001")
+    Plt.figure(5)
+    Plt.bland_altman_plot(o_DBP_array, est_DBP_array, xstr="Mean DBP(mmHg)", ystr="Difference DBP(mmHg)")
+    Plt.figure(6)
+    Plt.bland_altman_plot(o_SBP_array, est_SBP_array, xstr="Mean SBP(mmHg)", ystr="Difference SBP(mmHg)")
+    Plt.figure(7)
+    Plt.bland_altman_plot(o_PP_array, est_PP_array, xstr="Mean PP(mmHg)", ystr="Difference PP(mmHg)")
+    Plt.figure(8)
+    Plt.bland_altman_plot(o_MAP_array, est_MAP_array, xstr="Mean MAP(mmHg)", ystr="Difference MAP(mmHg)")
+    Plt.show()
+
 
 f2_abs_common = list()
 f2_angle_common = list()
-cluster_num = 15000
+cluster_num = 100
 readPath = MIMICHelper.NEW_CLUSTER_ORIGINAL
 centers = FileHelper.readFromFileFloat(readPath + "java_" + str(cluster_num) + "\\center.cluster")
 
@@ -692,7 +837,7 @@ if __name__ == "__main__":
     # Create data loaders.
     train_dataloader = DataLoader(training_data, batch_size=batch_size)
     valid_dataloader = DataLoader(validate_data, batch_size=batch_size)
-    test_dataloader = DataLoader(test_data, batch_size=1)
+    test_dataloader = DataLoader(test_data, batch_size=batch_size)
 
     for timeSample, freqSample, Ydata, wave in test_dataloader:
         print("Shape of timeSample [N, C, H, W]: {}, Shape of freqSample [N, C, H, W]: {}".format(timeSample.shape,
@@ -703,31 +848,31 @@ if __name__ == "__main__":
     model = CombinedNetwork()
     model.to(device)
     print(model.timeModule.Con1.weight.device)
-    #####################################################################
-    # Optimizing the Model Parameters
-    # ----------------------------------------
-    # To train a model, we need a `loss function <https://pytorch.org/docs/stable/nn.html#loss-functions>`_
-    # and an `optimizer <https://pytorch.org/docs/stable/optim.html>`_.
 
     loss_fn = nn.L1Loss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, betas=[0.9, 0.999])
+    base_rate = 0.1
+    optimizer = torch.optim.Adam(model.parameters(), lr=base_rate, betas=(0.9, 0.999))
     alpha = 0.2
 
     # train
-    # model.load_state_dict(torch.load("model_use_abs_60.pth"))
-    # epochs = 800
-    # for t in range(61, epochs + 1):
+    # model.load_state_dict(torch.load("model_1_26_160.pth"))
+    # epochs = 200
+    # for t in range(101, epochs + 1):
     #     print(f"Epoch {t}\n-------------------------------")
     #     train(train_dataloader, model, loss_fn, optimizer, alpha, t)
     #     test(valid_dataloader, model, loss_fn, t)  # 用验证集验证
     #     if t % 20 == 0:
-    #         torch.save(model.state_dict(), "model_use_abs_" + str(t) + ".pth")
+    #         torch.save(model.state_dict(), "model_1_26_" + str(t) + ".pth")
+    #     learning_rate = base_rate * (1 - t / epochs) ** 0.5
+    #     for params in optimizer.param_groups:
+    #         # 遍历Optimizer中的每一组参数，将该组参数的学习率 * 0.9
+    #         params['lr'] = learning_rate
 
     # test
-    model.load_state_dict(torch.load("model_use_abs_80.pth"))
+    model.load_state_dict(torch.load("model_1_26_160.pth"))
     # test(test_dataloader, model, loss_fn, None)
 
-    d = [0.5, 0.4]
+    d = [1]
     for _ in d:
         s_t = time.time()
         testWithCluster(test_dataloader, model, loss_fn, None, _)

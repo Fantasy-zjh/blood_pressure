@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 
 import h5py
@@ -10,6 +11,7 @@ from detecta import detect_peaks
 import matplotlib.pyplot as plt
 from FileHelper import FileHelper
 import random
+from WaveletDenoising import wavelet_noising
 
 
 class MIMICHelper:
@@ -114,16 +116,23 @@ class MIMICHelper:
             ecgdata = ecgData[i]
             dataLength = len(ppgdata)
             x = np.arange(dataLength)
-            smoothPPG = MIMICHelper.bindPassFilter(ppgdata)  # 对PPG的处理是带通滤波
-            smoothABP = MIMICHelper.sgFilter(abpdata)  # 对ABP的处理是Savitzky–Golay滤波器
+            smoothPPG = wavelet_noising(ppgdata)
+            smoothABP = wavelet_noising(abpdata)
+            # smoothPPG = MIMICHelper.bindPassFilter(ppgdata)  # 对PPG的处理是带通滤波
+            # smoothABP = MIMICHelper.sgFilter(abpdata)  # 对ABP的处理是Savitzky–Golay滤波器
 
-            # 展示平滑后的ppg
+            # 展示平滑后的
             # Plt.prepare()
             # Plt.figure(1)
-            # Plt.subPlot(211)
-            # Plt.plotLiner(x[:1000], abpdata[:1000])
-            # Plt.subPlot(212)
-            # Plt.plotLiner(x[:1000], smoothABP[:1000])
+            # Plt.subPlot(221)
+            # plt.title("index:{}".format(i))
+            # plt.plot(abpdata[:1000])
+            # Plt.subPlot(222)
+            # plt.plot(smoothABP[:1000])
+            # Plt.subPlot(223)
+            # plt.plot(ppgdata[:1000])
+            # Plt.subPlot(224)
+            # plt.plot(smoothPPG[:1000])
             # Plt.show()
 
             # 峰值检测，以10s为片段切片
@@ -144,6 +153,7 @@ class MIMICHelper:
                 sbp = abpdataSplit[j].max()
                 YResult.append([dbp, sbp])
                 collect = True
+                break  # 每条记录只生成一条数据，其余的干掉
             if collect:
                 count += 1
         print("共有{}组数据".format(len(abpResult)))
@@ -317,7 +327,20 @@ class MIMICHelper:
                     jump = True
             if jump:
                 continue
-
+            # plt.figure(i, figsize=(12, 8))
+            # plt.subplot(2, 1, 1)
+            # plt.plot(ppg_train)
+            # for ind in ppg_ind_p:
+            #     plt.plot(ind, ppg_train[ind], 'o', color='red')
+            # for ind in ppg_ind_v:
+            #     plt.plot(ind, ppg_train[ind], '*', color='red')
+            # plt.subplot(2, 1, 2)
+            # plt.plot(abp_train)
+            # for ind in abp_ind_p:
+            #     plt.plot(ind, abp_train[ind], 'o', color='red')
+            # for ind in abp_ind_v:
+            #     plt.plot(ind, abp_train[ind], '*', color='red')
+            # plt.show()
             num = min(len(ppg_ind_v), len(abp_ind_v))
             for j in range(1, num - 1):
                 suit_ppg_train = ppg_train[ppg_ind_v[j]:ppg_ind_v[j + 1] + 1]
@@ -327,8 +350,12 @@ class MIMICHelper:
                     continue
                 if min(suit_abp_train) < suit_abp_train[0] and min(suit_abp_train) < suit_abp_train[-1]:
                     continue
+                rand = random.randint(1, 10)
+                if rand <= 5:
+                    continue
                 ppg_train_result.append(signal.resample(suit_ppg_train, 125).tolist())
                 abp_train_result.append(signal.resample(suit_abp_train, 125).tolist())
+                break
         for i in range(len(ppg_test_data)):
             ppg_test = ppg_test_data[i]
             abp_test = abp_test_data[i]
@@ -373,8 +400,12 @@ class MIMICHelper:
                     continue
                 if min(suit_abp_test) < suit_abp_test[0] and min(suit_abp_test) < suit_abp_test[-1]:
                     continue
+                rand = random.randint(1, 10)
+                if rand <= 5:
+                    continue
                 ppg_test_result.append(signal.resample(suit_ppg_test, 125).tolist())
                 abp_test_result.append(signal.resample(suit_abp_test, 125).tolist())
+                break
         # 归一化
         # for i in range(len(ppg_train_result)):
         #     Max = max(ppg_train_result[i])
@@ -384,6 +415,13 @@ class MIMICHelper:
         #     Max = max(ppg_test_result[i])
         #     Min = min(ppg_test_result[i])
         #     ppg_test_result[i] = [(value - Min) / (Max - Min) for value in ppg_test_result[i]]
+        # 重采样
+        # for i in range(len(ppg_train_result)):
+        #     ppg_train_result[i] = signal.resample(ppg_train_result[i], 80)
+        #     abp_train_result[i] = signal.resample(abp_train_result[i], 80)
+        # for i in range(len(ppg_test_result)):
+        #     ppg_test_result[i] = signal.resample(ppg_test_result[i], 80)
+        #     abp_test_result[i] = signal.resample(abp_test_result[i], 80)
         FileHelper.writeToFile(ppg_train_result, MIMICHelper.NEW_CLUSTER_ORIGINAL + "ppg_train.blood")
         FileHelper.writeToFile(abp_train_result, MIMICHelper.NEW_CLUSTER_ORIGINAL + "abp_train.blood")
         FileHelper.writeToFile(ppg_test_result, MIMICHelper.NEW_CLUSTER_ORIGINAL + "ppg_test.blood")
@@ -417,38 +455,107 @@ class MIMICHelper:
         plt.legend(prop=labelFont)
         plt.show()
 
-    # 绘制去噪前后的数据图
+    # 绘制波峰波谷图
     @staticmethod
-    def plotWeifen():
-        from WaveletDenoising import wavelet_noising
+    def plotPeakAndValley():
         ppgData = FileHelper.readFromFileFloat(MIMICHelper.NEW_ONE_HOME + "ppg.blood")
-        for ppg in ppgData:
-            # ppg2 = [ppg[i+1]-ppg[i] for i in range(len(ppg)-1)]
-            ppgFilter = MIMICHelper.bindPassFilter(ppg)
-            ppgDenoise = wavelet_noising(ppg)
+        abpData = FileHelper.readFromFileFloat(MIMICHelper.NEW_ONE_HOME + "abp.blood")
+        for i in range(len(ppgData)):
+            ppg = ppgData[i]
+            abp = abpData[i]
+            ppg_ind_p = detect_peaks(ppg, valley=False, show=False, mpd=50)
+            ppg_ind_v = detect_peaks(ppg, valley=True, show=False, mpd=50)
+            abp_ind_p = detect_peaks(abp, valley=False, show=False, mpd=50)
+            abp_ind_v = detect_peaks(abp, valley=True, show=False, mpd=50)
             plt.figure(1, figsize=(12, 8))
             plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
             plt.rcParams['axes.unicode_minus'] = False
-            plt.plot(ppg, label='脉搏波波形', color='blue')
-            # plt.plot(ppg2, label='微分', color='red')
-            plt.plot(ppgFilter, label='滤波', color='red')
-            plt.plot(ppgDenoise, label='小波去噪', color='yellow')
+            plt.subplot(2, 1, 1)
+            plt.plot(ppg, color='blue')
+            plt.title("PPG信号", fontsize=20)
+            for ind in ppg_ind_p:
+                plt.plot(ind, ppg[ind], 'o', color='red')
+            for ind in ppg_ind_v:
+                plt.plot(ind, ppg[ind], '*', color='red')
+            plt.tick_params(labelsize=20)
+            plt.tight_layout()
+
+            plt.subplot(2, 1, 2)
+            plt.title("ABP信号", fontsize=20)
+            plt.plot(abp, color='blue')
+            for ind in abp_ind_p:
+                plt.plot(ind, abp[ind], 'o', color='red')
+            for ind in abp_ind_v:
+                plt.plot(ind, abp[ind], '*', color='red')
             labelFont = {
                 # 'family': 'Times New Roman',
                 'size': 30
             }
             plt.tick_params(labelsize=20)
             plt.tight_layout()
-            plt.legend(prop=labelFont, loc='upper right')
+            # plt.legend(prop=labelFont, loc='upper right')
+
             plt.show()
+
+    # 绘制异常值排除图
+    @staticmethod
+    def plotAbnormal():
+        abpData = FileHelper.readFromFileFloat(MIMICHelper.NEW_ONE_HOME + "abp.blood")
+        abp = abpData[0]
+        abp_ind_p = detect_peaks(abp, valley=False, show=False, mpd=50)
+        abp_ind_v = detect_peaks(abp, valley=True, show=False, mpd=50)
+
+        plt.figure(1, figsize=(14, 8))
+        plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
+        plt.rcParams['axes.unicode_minus'] = False
+
+        grid = plt.GridSpec(2, 4)
+        fs = 25
+        plt.subplot(grid[0:2, 0:2])
+        plt.plot(abp, color='blue')
+        plt.title("ABP信号", fontsize=fs)
+        for ind in abp_ind_p:
+            plt.plot(ind, abp[ind], marker='o', markerfacecolor='none', markersize=15, color='red')
+        plt.text(abp_ind_p[-1] + 25, abp[abp_ind_p[-1] - 2], "Py", color='red', fontsize=20)
+        plt.annotate("", fontsize=15, color='red', xy=(abp_ind_v[0], abp[abp_ind_v[0]]),
+                     xytext=(abp_ind_v[1], abp[abp_ind_v[0]]), arrowprops=dict(arrowstyle='<->', color='red'))
+        plt.text(abp_ind_v[0] - 1, abp[abp_ind_v[0]] + 1, "ΔPx", color='red', fontsize=20)
+        plt.tick_params(labelsize=30)
+        plt.tight_layout()
+
+        abnormalData = FileHelper.readFromFileFloat(MIMICHelper.NEW_ONE_HOME + "abnormal.blood")
+        plt.subplot(grid[0, 2])
+        plt.title("异常数据1", fontsize=fs)
+        plt.plot(abnormalData[756], color='blue')
+        plt.tick_params(labelsize=20)
+        plt.tight_layout()
+        plt.subplot(grid[0, 3])
+        plt.title("异常数据2", fontsize=fs)
+        plt.plot(abnormalData[35], color='blue')
+        plt.tick_params(labelsize=20)
+        plt.tight_layout()
+        plt.subplot(grid[1, 2])
+        plt.title("异常数据3", fontsize=fs)
+        plt.plot(abnormalData[162], color='blue')
+        plt.tick_params(labelsize=20)
+        plt.tight_layout()
+        plt.subplot(grid[1, 3])
+        plt.title("异常数据4", fontsize=fs)
+        plt.plot(abnormalData[754], color='blue')
+        plt.tick_params(labelsize=20)
+        plt.tight_layout()
+
+        # plt.legend(prop=labelFont, loc='upper right')
+        plt.show()
 
 
 # 心率50-150的话，两个波峰最小距离为50（采样频率125hz）
 if __name__ == "__main__":
     s_t = time.time()
-    # MIMICHelper.process()
-    # MIMICHelper.splitDataset()
-    # MIMICHelper.makeClusterDataset()
-    # MIMICHelper.plotWeifen()
+    MIMICHelper.process()
+    MIMICHelper.splitDataset()
+    MIMICHelper.makeClusterDataset()
+    # MIMICHelper.plotPeakAndValley()
+    # MIMICHelper.plotAbnormal()
     e_t = time.time()
     print("耗时{}".format(e_t - s_t))
